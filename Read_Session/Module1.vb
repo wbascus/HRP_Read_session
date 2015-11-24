@@ -39,18 +39,20 @@ Module Module1
         'Debug.WriteLine(sSql)
         'conn.Execute(sSql)
 
-        results = process_Folder(objExcel, conn)
+        'results = process_Folder(objExcel, conn)
 
         'test a single file
         'Process_workbook("20151110-160531 Working in Workday Session 1 - Data Collection Tool College of Arts And Sciences_Linguistics" & ".xlsm", objExcel, conn)    'Session 1 test
         'Process_workbook("20151118- 1009 HFS - Session 3 - Data Collection - Working in Workday" & ".xlsx", objExcel, conn)    'Session 3 test
         'Process_workbook("20151118- 1009 HFS - Session 2 - Data Collection - Working in Workday" & ".xlsx", objExcel, conn)    'Session 2 test
 
-        'generate_excel_report(objExcel, conn, "Workday_Role_Mapping", "")  'file name, 'where clause
+        'generate_excel_report(objExcel, conn, "Workday_Role_Mapping", "")  'file name, '
 
         'generate_error_report(objExcel, conn, "Error_report", "")
 
         'initiate_unit_reports(objExcel, conn)
+
+        generate_unit_report(objExcel, conn, "Workday_Role_Mapping", "Housing and Food Services (Housing and Food Services)", 109)  'file name, '
 
         conn.Close()
 
@@ -1040,11 +1042,15 @@ Module Module1
     Function initiate_unit_reports(objExcel, conn)
         Dim sSql
         Dim rec As ADODB.Recordset
-        Dim Unit = ""
-        Dim record_count = 0
-        Dim file_name = ""
-        Dim where_clause = ""
-        Dim i
+        Dim Unit As String
+        Dim record_count As Integer
+        Dim file_name As String
+        Dim where_clause As String
+        Dim i As Integer
+        Dim j As Integer
+        Dim fld
+        Dim start_time
+        Dim end_time
 
         rec = New ADODB.Recordset
 
@@ -1060,15 +1066,14 @@ Module Module1
             'Debug.WriteLine("Folder already Exists")
         End Try
 
-        Dim j = 0
+        j = 0
         If (rec.BOF And rec.EOF) Then
             Debug.WriteLine("No records found.")
         Else
             Do While Not rec.EOF
-                Dim fld
                 i = 0
-                Dim start_time = Now()
-                For Each fld In rec.Fields 'fails here, hilighting fld
+                start_time = Now()
+                For Each fld In rec.Fields
                     If i = 0 Then
                         Unit = fld.value
                     Else
@@ -1080,7 +1085,7 @@ Module Module1
                 file_name = "Working_in_Workday_" & Unit
                 where_clause = Unit
                 generate_unit_report(objExcel, conn, file_name, where_clause, record_count)
-                Dim end_time = Now()
+                end_time = Now()
                 Dim elapsed_time = DateDiff("s", start_time, end_time)
                 Debug.WriteLine("Processed " & j & ": " & Unit & " in " & elapsed_time & " seconds")
                 rec.MoveNext()
@@ -1701,12 +1706,12 @@ Module Module1
 
         worksheet.Cells(1, 1).Value = "Code"
         worksheet.Cells(2, 1).Value = "I9"
-        worksheet.Cells(3, 1).Value = "ABP"
-        worksheet.Cells(4, 1).Value = "AD"
-        worksheet.Cells(5, 1).Value = "AE"
-        worksheet.Cells(6, 1).Value = "ACP"
-        worksheet.Cells(7, 1).Value = "CP"
-        worksheet.Cells(8, 1).Value = "CM"
+        worksheet.Cells(3, 1).Value = "AC"
+        worksheet.Cells(4, 1).Value = "ABP"
+        worksheet.Cells(5, 1).Value = "AD"
+        worksheet.Cells(6, 1).Value = "AE"
+        worksheet.Cells(7, 1).Value = "ACP"
+        worksheet.Cells(8, 1).Value = "CP"
         worksheet.Cells(9, 1).Value = "CAC"
         worksheet.Cells(10, 1).Value = "HRC"
         worksheet.Cells(11, 1).Value = "HRE"
@@ -1717,11 +1722,11 @@ Module Module1
         worksheet.Cells(1, 2).Value = "Workday Role"
         worksheet.Cells(2, 2).Value = "I-9 Coordinator"
         worksheet.Cells(3, 2).Value = "Absence Partner"
-        worksheet.Cells(4, 2).Value = "Academic Dean"
-        worksheet.Cells(5, 2).Value = "Academic Executive"
-        worksheet.Cells(6, 2).Value = "Academic Partner"
-        worksheet.Cells(7, 2).Value = "Compensation Partner"
-        worksheet.Cells(8, 2).Value = "Cost Center Manager"
+        worksheet.Cells(4, 2).Value = "Academic Chair"
+        worksheet.Cells(5, 2).Value = "Academic Dean"
+        worksheet.Cells(6, 2).Value = "Academic Executive"
+        worksheet.Cells(7, 2).Value = "Academic Partner"
+        worksheet.Cells(8, 2).Value = "Compensation Partner"
         worksheet.Cells(9, 2).Value = "Costing Allocations Coordinator"
         worksheet.Cells(10, 2).Value = "HR Coordinator"
         worksheet.Cells(11, 2).Value = "HR Executive"
@@ -1732,11 +1737,11 @@ Module Module1
         worksheet.Cells(1, 3).Value = "Role Description"
         worksheet.Cells(2, 3).Value = "Collects I-9 information for their assigned organization and verifies that I-9 information is valid."
         worksheet.Cells(3, 3).Value = "This role performs absence management tasks for assigned organizations.  May enter time off for a worker. May request and return employee from a leave of absence."
-        worksheet.Cells(4, 3).Value = "This role is responsible for determining organizational objectives at the school, college, and/or campus level.  Approves HR transactions related to academic personnel across multiple supervisory organizations."
-        worksheet.Cells(5, 3).Value = "This role can view all HR setup and operational data for assigned organizations.  This role is the highest departmental role and has approval authority for Workday business processes related to academic personnel."
-        worksheet.Cells(6, 3).Value = "This role has administrative responsibilities related to a group of academic personnel designated by supervisory organization.  Has review and/or approval authority for Workday business processes related to academic personnel."
-        worksheet.Cells(7, 3).Value = "This role has compensation related duties For a group of employees for assigned supervisory organizations."
-        worksheet.Cells(8, 3).Value = "This role manages the budget related to their cost center. Has approval authority on business processes where an employee will be added to the supervisory organization tied to their cost center."
+        worksheet.Cells(4, 3).Value = "This role is responsible for determining organizational objectives department level.  May approve HR related actions within their assigned supervisory organizations."
+        worksheet.Cells(5, 3).Value = "This role is responsible for determining organizational objectives at the school, college, and/or campus level.  Approves HR transactions related to academic personnel across multiple supervisory organizations."
+        worksheet.Cells(6, 3).Value = "This role can view all HR setup and operational data for assigned organizations.  This role is the highest departmental role and has approval authority for Workday business processes related to academic personnel."
+        worksheet.Cells(7, 3).Value = "This role has administrative responsibilities related to a group of academic personnel designated by supervisory organization.  Has review and/or approval authority for Workday business processes related to academic personnel."
+        worksheet.Cells(8, 3).Value = "This role has compensation related duties For a group of employees for assigned supervisory organizations."
         worksheet.Cells(9, 3).Value = "This role enters costing allocation information for employees and is responsible for payroll transactions within a department; they also have the ability to change budgets."
         worksheet.Cells(10, 3).Value = "This individual has administrative responsibilities for a group of employees designated by a supervisory organization.  Can initiate most HR-related actions."
         worksheet.Cells(11, 3).Value = "This role can view all HR setup and operational data for assigned organizations.  This role is the highest departmental role and has approval authority for Workday business processes related to personnel"
@@ -1856,6 +1861,8 @@ Module Module1
         worksheet.PageSetup.PrintTitleColumns = "$A:$C"
         worksheet.PageSetup.CenterHeader = where_clause & Chr(10) & worksheet_name
         worksheet.PageSetup.RightHeader = "&D"
+
+        worksheet.cells(1, 1).activate
 
         workbook.Save()
         workbook.Close
