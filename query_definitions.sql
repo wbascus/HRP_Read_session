@@ -324,7 +324,7 @@ t2.[11A_3B],
 t2.[11B_3B] 
 FROM (SELECT * FROM (SELECT * FROM GrandUnion AS g INNER JOIN org_team_map AS s ON g.org_team_mapID = s.org_team_mapID)  AS t1 INNER JOIN units_summary AS u ON t1.unitID = u.unitID)  AS t2;
 
-'Workday Role_Mapping_By Role'
+'Workday Role_Mapping_By Role_base'
 SELECT DISTINCT *
 FROM (SELECT b.Unit, 
 b.[Home Dpt Budget Number], 
@@ -335,12 +335,53 @@ b.[Supervisory Org],
 IIf(Len([b].[7_4A])>0,"x","") AS I9, 
 IIF(Len([b].[4A_2A]&[b].[4B_2A]&[b].[4B_3A]&[b].[4C_3A]&[b].[8A_2B])>0,"x","") AS ABP, 
 IIf(Len([b].[5B_3A] & [b].[6B_2A] & [b].[8B_2A] & [b].[11A_3A] & [b].[11B_3A])>0,"x","") AS ACP, 
-IIf(Len([b].[10_3A])>0,"x","") AS CP, IIf(Len([b].[6A_3A] & [b].[6B_3A] & [b].[12_4A])>0,"x","") AS CAC, 
+IIf(Len([b].[10_3A])>0,"x","") AS CP, 
+IIf(Len([b].[6A_3A] & [b].[6B_3A] & [b].[12_4A])>0,"x","") AS CAC, 
 IIf(Len([b].[5A_2B] & [b].[5A_4A] & [b].[5B_2B] & [b].[5B_4A] & [b].[6B_1A] & [b].[8A_1A] & [b].[8A_3A] & [b].[8B_1B] & [b].[8B_3A] & [b].[8b_4A] & [b].[8C_3A] & [b].[9A_2A] & [b].[9B_2B] & [b].[10_2A] & [b].[11A_2A] & [b].[11A_4A] & [b].[11B_2A] & [b].[12_2A])>0,"x","") AS HRC, 
 IIf(Len([b].[6A_2A] & [b].[8A_2A] & [b].[8C_3A] & [b].[9A_3A] & [b].[12_3A])>0,"x","") AS HRP, 
 IIf(Len([b].[1_2C] & [b].[1_3B] & [b].[2_2a])>0,"x","") AS TC 
 FROM Workday_Role_Mapping_by_field_in_order_of_scenario AS b 
 WHERE (((b.[Employee First Name])<>"Ex: Peter")))  AS m;
+
+'Workday_Role_Mapping_By_Role'
+SELECT DISTINCT b.Unit, 
+b.[Home Dpt Budget Number], 
+b.[Employee First Name], 
+b.[Employee Last Name], 
+b.EID, b.[Supervisory Org], 
+IIf(b.ABP="x","x","") AS ABP, 
+"" AS AC, 
+"" AS AD, 
+"" AS AE, 
+IIf([b].[ACP]="x","x","") AS ACP, 
+IIf([b].[CP]="x","x","") AS CP, 
+IIf([b].[CAC]="x","x","") AS CAC, 
+IIf(([b].[HRP]="x" OR [b].[ACP] = "x"),"",IIf([b].[HRC]="x","x","")) AS HRC, 
+"" as HRE,
+IIf([b].[ACP]="x","x",IIf([b].[HRP]="x","x","")) AS HRP, 
+IIf([b].[I9]="x","x","") AS I9, 
+IIf([b].[ACP]="x","x",IIf([b].[HRP]="x","x","")) AS RP, 
+IIf([b].[TC]="x","x","") AS TC
+FROM Workday_Role_Mapping_by_role_base AS b;
+
+'Workday_Role_Mapping_By_role_transpose'
+SELECT [b].[Employee First Name] & " " & [b].[Employee Last Name] & " " & [b].[EID] AS [Employee Slug], 
+b.Unit, 
+b.ABP, 
+"" AS AC, 
+"" AS AD, 
+"" AS AE, 
+b.ACP, 
+b.CP, 
+b.CAC, 
+b.HRC, 
+"" AS HRE,
+b.HRP, 
+b.I9, 
+b.RP, 
+b.TC
+FROM Workday_Role_Mapping_by_role b;
+
 
 'Unique Employee Roles'
 SELECT DISTINCT

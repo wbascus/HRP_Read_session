@@ -5,65 +5,102 @@ Module Module1
     Sub Main()
         Dim objExcel As Excel.Application       'the file we're going to read from
         Dim conn As ADODB.Connection
-        Dim files_read = 0
-        Dim new_files = 0
-        Dim successful_adds = 0
-        Dim error_format = 0
-        Dim error_content = 0
+        Dim files_read As Integer
+        Dim new_files As Integer
+        Dim successful_adds As Integer
+        Dim error_format As Integer
+        Dim error_content As Integer
         Dim results As Integer()
         Dim sSql
         Dim rec As ADODB.Recordset
         Dim start_time As DateTime
         Dim end_time As DateTime
         Dim elapsed_time As Long
+        Dim elapsed_time_hours As Long
+        Dim elapsed_time_minutes As Long
+        Dim elapsed_time_seconds As Long
+        Dim folder_path As String
+        Dim dev_mode As Boolean
+        Dim demo_mode As Boolean
+        Dim reset As Boolean
 
-        start_time = Now()
-
-        results = {0, 0, 0, 0, 0, 0}
-        rec = New ADODB.Recordset
         objExcel = New Excel.Application
         conn = New ADODB.Connection
+        files_read = 0
+        new_files = 0
+        successful_adds = 0
+        error_format = 0
+        error_content = 0
+        results = {0, 0, 0, 0, 0, 0}
+        sSql = ""
+        rec = New ADODB.Recordset
+        start_time = Now()
+        end_time = Now()
+        elapsed_time = 0
+        elapsed_time_hours = 0
+        elapsed_time_minutes = 0
+        elapsed_time_seconds = 0
+        folder_path = ""
+        dev_mode = False
+        reset = False
+        demo_mode = True
 
-        conn.Open("Provider=Microsoft.ACE.OLEDB.12.0;Data Source=C:\submissions\Session_responses.accdb")
+        If dev_mode = True Then
+            folder_path = "\\sharepoint.washington.edu@SSL\DavWWWRoot\oim\proj\HRPayroll\Imp\Supervisory Org Cleanup\Role_mapping_2\Submittals"
+            conn.Open("Provider=Microsoft.ACE.OLEDB.12.0;Data Source=C:\Role_Mapping_2\Session_responses_2.accdb")
+            If reset = True Then
+                sSql = "DELETE * FROM submittals"
+                'Debug.WriteLine(sSql)
+                'conn.Execute(sSql)
+                sSql = "DELETE * FROM rejected_submittals"
+                'Debug.WriteLine(sSql)
+                'conn.Execute(sSql)
+                sSql = "DELETE * FROM responses"
+                'Debug.WriteLine(sSql)
+                'conn.Execute(sSql)
+                sSql = "DELETE * FROM unit_correction_map"
+                'Debug.WriteLine(sSql)
+                'conn.Execute(sSql)
+                sSql = "DELETE * FROM org_team_map"
+                'Debug.WriteLine(sSql)
+                'conn.Execute(sSql)
+            End If
+        Else
+            folder_path = "\\sharepoint.washington.edu@SSL\DavWWWRoot\oim\proj\HRPayroll\Imp\Supervisory Org Cleanup\Role-Mapping"
+            conn.Open("Provider=Microsoft.ACE.OLEDB.12.0;Data Source=C:\submissions\Session_responses.accdb")
+        End If
 
-        sSql = "DELETE * FROM submittals WHERE submittalID > 9228"
-        'Debug.WriteLine(sSql)
-        'conn.Execute(sSql)
-        sSql = "DELETE * FROM responses"
-        'Debug.WriteLine(sSql)
-        'conn.Execute(sSql)
-        sSql = "DELETE * FROM unit_correction_map"
-        'Debug.WriteLine(sSql)
-        'conn.Execute(sSql)
-        sSql = "DELETE * FROM org_team_map"
-        'Debug.WriteLine(sSql)
-        'conn.Execute(sSql)
-
-        'results = process_Folder(objExcel, conn)
+        'results = process_Folder(objExcel, conn, folder_path)
 
         'test a single file
         'Process_workbook("20151110-160531 Working in Workday Session 1 - Data Collection Tool College of Arts And Sciences_Linguistics" & ".xlsm", objExcel, conn)    'Session 1 test
         'Process_workbook("20151118- 1009 HFS - Session 3 - Data Collection - Working in Workday" & ".xlsx", objExcel, conn)    'Session 3 test
         'Process_workbook("20151118- 1009 HFS - Session 2 - Data Collection - Working in Workday" & ".xlsx", objExcel, conn)    'Session 2 test
 
-        'generate_excel_report(objExcel, conn, "Workday_Role_Mapping", "")  'file name, '
+        'generate_excel_report(objExcel, conn, "Workday_Role_Mapping", "", demo_mode)  'file name, '
 
         'generate_error_report(objExcel, conn, "Error_report", "")
 
-        'initiate_unit_reports(objExcel, conn)
+        'initiate_unit_reports(objExcel, conn, "C:\submissions\Unit Reports\", demo_mode)
 
-        generate_unit_report(objExcel, conn, "Workday_Role_Mapping", "Housing and Food Services (Housing and Food Services)", 109)  'file name, '
+        generate_unit_report(objExcel, conn, "Housing and Food Services (Housing and Food Services)", "C:\submissions\Unit Reports\", demo_mode)  'file name, '
+        'generate_unit_report(objExcel, conn, "Workday_Role_Mapping", "Applied Physics Lab (Applied Physics Lab)", 7)  'file name, 
 
         conn.Close()
 
-        objExcel.Quit()
+        If demo_mode = False Then
+            objExcel.Quit()
+        End If
 
         end_time = Now()
 
-        elapsed_time = DateDiff("s", start_time, end_time)
+        elapsed_time_hours = DateDiff("h", start_time, end_time)
+        elapsed_time_minutes = DateDiff("m", start_time, end_time) Mod 60
+        elapsed_time_seconds = DateDiff("s", start_time, end_time) Mod 60
 
-        Debug.WriteLine("Read " & results(0) & " files in folder in " & elapsed_time / 60 & " minutes.")
-        Debug.WriteLine(results(1) & " New files identified.")
+        Debug.WriteLine("Read " & results(0) & " files in folder in " & elapsed_time_hours & ":" & elapsed_time_minutes & ":" & elapsed_time_seconds & " seconds")
+        Console.WriteLine("Read " & results(0) & " files in folder in " & elapsed_time_seconds & " seconds.")
+        Debug.WriteLine(results(1) & " new files identified.")
         Debug.WriteLine(results(2) & " files successfully added.")
         Debug.WriteLine(results(3) & " files Not added.")
         Debug.WriteLine(results(4) & " files contain format errors.")
@@ -71,7 +108,7 @@ Module Module1
 
     End Sub
 
-    Function process_Folder(objExcel, conn) As Integer()
+    Function process_Folder(objExcel, conn, folderpath) As Integer()
 
         'results(0) = 'Total number of files read
         'results(1) = 'Total number of new files
@@ -83,7 +120,6 @@ Module Module1
         Dim folder_count = 0
         Dim rec As ADODB.Recordset
         Dim FileNameWithExt
-        Dim folderpath = "\\sharepoint.washington.edu@SSL\DavWWWRoot\oim\proj\HRPayroll\Imp\Supervisory Org Cleanup\Role-Mapping"
         Dim filenames
         Dim results As Integer()
         Dim workbook_results As Integer()
@@ -110,7 +146,7 @@ Module Module1
             "specified part of the file is " &
             "locked.", ex.GetType().Name)
             MsgBox("Please ensure that you have access to " & folderpath &
-                    "on sharepoint.")
+                    " on sharepoint.")
 
         End Try
 
@@ -126,8 +162,8 @@ Module Module1
             rec.Open(sSql, conn)
 
             If (rec.BOF And rec.EOF) Then                                                   'if the file name has not been recorded
-                Debug.WriteLine("Processing " & file_count + 1 & ":  " & FileNameWithExt & "...")
-                workbook_results = Process_workbook(FileNameWithExt, objExcel, conn)
+                Debug.WriteLine("Processing " & file_count + 1 & ":  " & folderpath & "\" & FileNameWithExt & "...")
+                workbook_results = Process_workbook(FileNameWithExt, folderpath, objExcel, conn)
 
                 If (workbook_results(0) > 0) Then
                     successful_adds = successful_adds + 1
@@ -189,7 +225,7 @@ Module Module1
 
     End Function
 
-    Function Process_workbook(filename, objExcel, conn) As Integer()
+    Function Process_workbook(filename, folder_path, objExcel, conn) As Integer()
 
         'workbook_results(0)    = 1 File was inserted 0 file was not inserted
         'workbook_results(1)    = There was an error in format - number of worksheets was not what was expected
@@ -230,8 +266,7 @@ Module Module1
 
         rec = New ADODB.Recordset
 
-        excelPath = "\\sharepoint.washington.edu@SSL\DavWWWRoot\oim\proj\HRPayroll\Imp\Supervisory Org Cleanup\Role-Mapping\"
-        pathToFile = excelPath & filename
+        pathToFile = folder_path & "\" & filename
 
         file_ext = Mid$(filename, InStrRev(filename, ".") + 1)
         'Debug.WriteLine(file_ext)
@@ -379,11 +414,11 @@ Module Module1
 
             End If
 
-            Try
-                workbook.Close()
-            Catch ex As Exception
-                Debug.WriteLine("Could not close workbook.")
-            End Try
+            'Try
+            'workbook.Close()
+            'Catch ex As Exception
+            'Debug.WriteLine("Could not close workbook.")
+            'End Try
             workbook = Nothing
             worksheet = Nothing
 
@@ -679,26 +714,40 @@ Module Module1
         'read_field_results(4) = blank_field_ct_academic.ToString   'a count of academic blank fields
 
         Dim foo
-        Dim index = 0
-        Dim worksheet
-        Dim worksheetName
-        Dim scenario
-        Dim orient_cell
-        Dim startRow
-        Dim startCol
-        Dim collect_field_results As String()
-        Dim blank_field_txt_academic = ""
-        Dim blank_field_txt = ""
-        Dim blank_field_ct = 0
-        Dim blank_field_ct_academic = 0
-        Dim worksheet_name_error = "Worksheet name errors: (expected):(encountered);"
-        Dim worksheet_orient_error = "Orient cell errors: (s):(f):(oc);"
+        Dim index As Integer
+        Dim worksheet As Integer
+        Dim worksheetName As String
+        Dim scenario As String
+        Dim orient_cell As String
+        Dim startRow As Integer
+        Dim startCol As Integer
+        Dim data_found_ct As Integer
+        Dim blank_field_txt_academic As String
+        Dim blank_field_txt As String
+        Dim blank_field_ct As Integer
+        Dim blank_field_ct_academic As Integer
+        Dim worksheet_name_error As String
+        Dim worksheet_orient_error As String
         Dim read_field_results As String()
-        Dim data_found_ct = 0
-        Dim debug_state = True
+        Dim collect_field_results As String()
 
+        index = 0
+        worksheet = 0
+        worksheetName = ""
+        scenario = ""
+        orient_cell = ""
+        startRow = 0
+        startCol = 0
+        data_found_ct = 0
+        blank_field_txt_academic = ""
+        blank_field_txt = ""
+        blank_field_ct = 0
+        blank_field_ct_academic = 0
+        worksheet_name_error = "Worksheet name errors: (expected):(encountered);"
+        worksheet_orient_error = "Orient cell errors: (s):(f):(oc);"
         read_field_results = {"", "", "", "", "", "", ""} 'Data_found_ct, blank_field_txt, blank_field_ct, blank_field_academic_txt, blank_field_ct_academic, worksheet_name_error, worksheet_orient_error
         collect_field_results = {"", "", ""}
+        Dim debug_state = False
 
         If debug_state = True Then
             Debug.WriteLine("Reading fields for submittalID " & submittalID)
@@ -706,6 +755,7 @@ Module Module1
 
         For Each field In field_definition
             foo = Split(field, ",")
+
             worksheet = CInt(foo(0))
             worksheetName = foo(1)
             scenario = foo(2)
@@ -713,6 +763,7 @@ Module Module1
             orient_cell = foo(4)
             startRow = CInt(foo(5))
             startCol = CInt(foo(6))
+
             collect_field_results = collect_field(workbook, conn, submittalID, worksheet, worksheetName, scenario, field, orient_cell, startRow, startCol)
 
             If CInt(collect_field_results(0)) = 0 Then
@@ -798,7 +849,7 @@ Module Module1
         Dim responseID As Integer
         Dim org_team_mapID
         Dim index
-        Dim debug_state = True
+        Dim debug_state = False
         Dim worksheet_name_error = ""
         Dim worksheet_orient_error = ""
         Dim results = {"", "", ""}   'index, worksheet_name_error, worksheet_orient_error
@@ -945,11 +996,11 @@ Module Module1
             'Debug.WriteLine("The program found no records For the " & scenario & ":" & field & " field.")
         End If
 
-        Try
-            currentWorkSheet.close()
-        Catch ex As Exception
-            'Debug.WriteLine("Couldn't Close worksheet")
-        End Try
+        'Try
+        'currentWorkSheet.close()
+        'Catch ex As Exception
+        'Debug.WriteLine("Couldn't Close worksheet")
+        'End Try
 
         results(0) = index
         results(1) = worksheet_name_error
@@ -998,7 +1049,7 @@ Module Module1
         TransposeDim = tempArray
     End Function
 
-    Function generate_excel_report(objExcel, conn, file_name, where_clause)
+    Function generate_excel_report(objExcel, conn, file_name, where_clause, demo_mode)
         Dim file_path = ""
         Dim folder = "C:\submissions\"
         Dim file_ext = ".xlsx"
@@ -1027,9 +1078,9 @@ Module Module1
         workbook.SaveAs(FileName:=file_path)
         workbook.Close()
 
-        generate_field_by_role_report(objExcel, conn, where_clause, file_path, "Field by Role", record_count)
-        generate_field_by_scenario_report(objExcel, conn, where_clause, file_path, "Field by Scenario", record_count)
-        generate_by_role_report(objExcel, conn, where_clause, file_path, "Roles", record_count)
+        generate_field_report(objExcel, conn, where_clause, file_path, "Field by Role", record_count, demo_mode)
+        generate_field_report(objExcel, conn, where_clause, file_path, "Field by Scenario", record_count, demo_mode)
+        generate_by_role_report(objExcel, conn, where_clause, file_path, "Roles", record_count, demo_mode)
 
         workbook = Nothing
         worksheet = Nothing
@@ -1039,7 +1090,7 @@ Module Module1
 
     End Function
 
-    Function initiate_unit_reports(objExcel, conn)
+    Function initiate_unit_reports(objExcel, conn, demo_mode)
         Dim sSql
         Dim rec As ADODB.Recordset
         Dim Unit As String
@@ -1082,9 +1133,9 @@ Module Module1
                     i = i + 1
                 Next fld
                 'Debug.WriteLine("Record Count: " & record_count & "; Unit: " & Unit)
-                file_name = "Working_in_Workday_" & Unit
+                'file_name = "Working_in_Workday_" & Unit
                 where_clause = Unit
-                generate_unit_report(objExcel, conn, file_name, where_clause, record_count)
+                generate_unit_report(objExcel, conn, where_clause, record_count, demo_mode)
                 end_time = Now()
                 Dim elapsed_time = DateDiff("s", start_time, end_time)
                 Debug.WriteLine("Processed " & j & ": " & Unit & " in " & elapsed_time & " seconds")
@@ -1097,16 +1148,75 @@ Module Module1
 
     End Function
 
-    Function generate_unit_report(objExcel, conn, file_name, where_clause, record_count)
+    Function generate_unit_report(objExcel, conn, where_clause, folder, demo_mode)
         Dim file_path = ""
-        Dim folder = "C:\submissions\Unit Reports\"
+        Dim rec As ADODB.Recordset
         Dim file_ext = ".xlsx"
         Dim workbook
         Dim worksheet
+        Dim file_name_append As String
+        Dim sSql As String
+        Dim Condition As String
+        Dim i As Integer
+        Dim j As Integer
+        Dim unit As String
+        Dim record_count As Integer
+        Dim file_name As String
+        Dim debug_mode As Boolean
 
-        file_path = folder & file_name & file_ext
+        file_path = ""
+        rec = New ADODB.Recordset
+        file_ext = ".xlsx"
+        'workbook
+        'worksheet
+        file_name_append = ""
+        sSql = ""
+        Condition = ""
+        i = 0
+        j = 0
+        unit = ""
+        record_count = 0
+        file_name = "Working In Workday"
+        debug_mode = False
 
-        objExcel.Visible = False
+        If Not IsNothing(where_clause) Then
+
+            Condition = " WHERE unit = """ & where_clause & """ "
+            sSql = "SELECT * FROM Workday_Role_mapping_summary" & Condition
+
+            rec.Open(sSql, conn)
+            j = 0
+            If (rec.BOF And rec.EOF) Then
+                Debug.WriteLine("No records found.")
+            Else
+                Do While Not rec.EOF
+                    i = 0
+                    For Each fld In rec.Fields
+                        If i = 0 Then
+                            unit = fld.value
+                        Else
+                            record_count = CInt(fld.value)
+                        End If
+                        i = i + 1
+                    Next fld
+                    i = 0
+                    j = j + 1
+                    rec.MoveNext()
+                Loop
+            End If
+            rec.Close()
+            file_name_append = "_" & unit
+        Else
+            file_name_append = ""
+            Condition = ""
+        End If
+
+        file_path = folder & file_name & file_name_append & file_ext
+        Debug.WriteLine(file_path)
+
+        If debug_mode = True Then
+            objExcel.Visible = True
+        End If
         objExcel.DisplayAlerts = 0 ' Don't display any messages about conversion and so forth
         workbook = objExcel.Workbooks.Add
         workbook.Sheets.Add
@@ -1115,18 +1225,17 @@ Module Module1
         worksheet = workbook.Worksheets("Sheet4")
         worksheet.Name = "Roles"
         worksheet = workbook.Worksheets("Sheet3")
-        worksheet.Name = "Field by Role"
+        worksheet.Name = "Field By Role"
         worksheet = workbook.Worksheets("Sheet2")
-        worksheet.Name = "Field by Scenario"
+        worksheet.Name = "Field By Scenario"
         worksheet = workbook.Worksheets("Sheet1")
         worksheet.Name = "Role Confirmation Tool"
         workbook.SaveAs(FileName:=file_path)
-        workbook.Close()
 
-        generate_field_by_role_report(objExcel, conn, " WHERE unit = """ & where_clause & """", file_path, "Field by Role", record_count)
-        generate_field_by_scenario_report(objExcel, conn, " WHERE unit = """ & where_clause & """", file_path, "Field by Scenario", record_count)
-        generate_by_role_report(objExcel, conn, "WHERE unit = """ & where_clause & """", file_path, "Roles", record_count)
-        generate_role_confirmation_tool(objExcel, conn, "WHERE unit = """ & where_clause & """", file_path, "Role Confirmation Tool", record_count)
+        generate_by_role_report(objExcel, conn, where_clause, file_path, "Roles", record_count, demo_mode)
+        generate_field_report(objExcel, conn, where_clause, file_path, "Field by Role", record_count, demo_mode)
+        generate_field_report(objExcel, conn, where_clause, file_path, "Field by Scenario", record_count, demo_mode)
+        generate_role_confirmation_tool(objExcel, conn, where_clause, file_path, "Role Confirmation Tool", record_count, demo_mode)
 
         workbook = Nothing
         worksheet = Nothing
@@ -1193,15 +1302,40 @@ Module Module1
 
     End Function
 
-    Function generate_by_role_report(objExcel, conn, where_clause, file_path, worksheet_name, record_count)
-        Dim sSql
+    Function generate_by_role_report(objExcel, conn, where_clause, file_path, worksheet_name, record_count, demo_mode)
+        Dim sSql As String
         Dim rec As ADODB.Recordset
         Dim workbook
         Dim worksheet
+        Dim condition As String
+        Dim index As Integer
+        Dim code As String
+        Dim title As String
+        Dim i As Integer
+        Dim j As Integer
+        Dim debug_mode As Boolean
+        Dim role_count As Integer
 
+        sSql = ""
         rec = New ADODB.Recordset
-        sSql = "SELECT * FROM Workday_Role_Mapping_by_role " & where_clause
-        'Debug.WriteLine(sSql)
+        'workbook
+        'worksheet
+        condition = ""
+        index = 0
+        code = ""
+        title = ""
+        i = 0
+        j = 0
+        debug_mode = False
+        role_count = 0
+
+        If where_clause = "" Then
+            condition = ""
+        Else
+            condition = " WHERE unit = """ & where_clause & """"
+        End If
+
+        sSql = "SELECT * FROM Workday_Role_Mapping_by_role" & condition & " ORDER BY  `employee last name` asc"
         rec.Open(sSql, conn)
         generate_worksheet(objExcel, rec, file_path, worksheet_name)
         rec.Close()
@@ -1209,79 +1343,119 @@ Module Module1
         workbook = objExcel.Workbooks.Open(file_path)
         worksheet = workbook.Worksheets(worksheet_name)
 
-        Dim max_column_txt = worksheet.Cells(1, 49).Address
-        Dim max_cell_txt = worksheet.Cells(record_count + 3, 49).Address
+        If debug_mode = True Then
+            objExcel.Visible = True
+            worksheet.Activate
+        End If
 
-        worksheet.Columns("A:A").ColumnWidth = 40
+        If demo_mode = True Then
+            objExcel.Visible = True
+            worksheet.Activate
+        End If
+
+
+        worksheet.Columns("A:A").ColumnWidth = 38
         worksheet.Columns("B:B").ColumnWidth = 8
         worksheet.Columns("C:C").ColumnWidth = 15
         worksheet.Columns("D:D").ColumnWidth = 15
         worksheet.Columns("E:E").ColumnWidth = 10
-        worksheet.Columns("F:F").ColumnWidth = 50
-        worksheet.Columns("G:G").ColumnWidth = 6
-        worksheet.Columns("H:H").ColumnWidth = 6
-        worksheet.Columns("I:I").ColumnWidth = 6
-        worksheet.Columns("J:J").ColumnWidth = 6
-        worksheet.Columns("K:K").ColumnWidth = 6
-        worksheet.Columns("L:L").ColumnWidth = 6
-        worksheet.Columns("M:M").ColumnWidth = 6
-        worksheet.Columns("N:N").ColumnWidth = 6
+        worksheet.Columns("F:F").ColumnWidth = 46
+        worksheet.Columns("G:S").ColumnWidth = 4
 
         worksheet.Rows("1").Insert
-        'worksheet.Range("G2:N2").Cut
 
-        worksheet.Cells(1, 7).Value = "I9"
-        worksheet.Cells(1, 8).Value = "ABP"
-        worksheet.Cells(1, 9).Value = "ACP"
-        worksheet.Cells(1, 10).Value = "CP"
-        worksheet.Cells(1, 11).Value = "CAC"
-        worksheet.Cells(1, 12).Value = "HRC"
-        worksheet.Cells(1, 13).Value = "HRP"
-        worksheet.Cells(1, 14).Value = "TC"
+        sSql = "SELECT role_code, role_title FROM roles WHERE role_order is not null ORDER BY  `role_order` asc"
+        'Debug.WriteLine(sSql)
+        rec.Open(sSql, conn)
+        If (rec.BOF And rec.EOF) Then
+            Debug.WriteLine("No records found.")
+        Else
+            Do While Not rec.EOF
+                i = 0
+                For Each fld In rec.Fields
+                    If i = 0 Then
+                        code = fld.value
+                    Else
+                        title = fld.value
+                    End If
+                    i = i + 1
+                Next fld
+                i = 0
+                j = j + 1
+                worksheet.cells(1, j + 6).Value = code
+                worksheet.cells(2, j + 6).Value = title
+                rec.MoveNext()
+            Loop
+        End If
+        rec.Close()
+        role_count = j
 
-        worksheet.Cells(2, 7).Value = "I-9 Coordinator"
-        worksheet.Cells(2, 8).Value = "Absence Partner"
-        worksheet.Cells(2, 9).Value = "Academic Partner"
-        worksheet.Cells(2, 10).Value = "Compensation Partner"
-        worksheet.Cells(2, 11).Value = "Costing Allocation Partner"
-        worksheet.Cells(2, 12).Value = "Human Resource Coordinator"
-        worksheet.Cells(2, 13).Value = "Human Resource Partner"
-        worksheet.Cells(2, 14).Value = "Time Coordinator"
 
-        worksheet.Columns("G:G").Interior.Color = RGB(253, 228, 207)
-        worksheet.Columns("H:H").Interior.Color = RGB(218, 231, 246)
-        worksheet.Columns("I:I").Interior.Color = RGB(246, 230, 230)
-        worksheet.Columns("J:J").Interior.Color = RGB(238, 234, 242)
-        worksheet.Columns("K:K").Interior.Color = RGB(228, 223, 236)
-        worksheet.Columns("L:L").Interior.Color = RGB(228, 228, 228)
-        worksheet.Columns("M:M").Interior.Color = RGB(205, 233, 239)
-        worksheet.Columns("N:N").Interior.Color = RGB(241, 245, 231)
+        Dim max_column_txt = worksheet.Cells(1, 19).Address
+        Dim max_cell_txt = worksheet.Cells(record_count + 3, 19).Address
+        Dim max_row = record_count + 3
 
-        worksheet.Range("G1:G2").Interior.Color = RGB(247, 150, 70)
-        worksheet.Range("H1:H2").Interior.Color = RGB(83, 141, 213)
-        worksheet.Range("I1:I2").Interior.Color = RGB(218, 150, 148)
-        worksheet.Range("J1:J2").Interior.Color = RGB(128, 100, 162)
-        worksheet.Range("K1:K2").Interior.Color = RGB(228, 223, 236)
-        worksheet.Range("L1:L2").Interior.Color = RGB(178, 178, 178)
-        worksheet.Range("M1:M2").Interior.Color = RGB(49, 134, 155)
-        worksheet.Range("N1:N2").Interior.Color = RGB(196, 215, 155)
+        index = 6
+        Do
+            If worksheet.Cells(1, index).Value = "I9" Then
+                worksheet.Columns(index).Interior.Color = RGB(253, 228, 207)
+                worksheet.Range(worksheet.Cells(1, index), worksheet.Cells(2, index)).Interior.Color = RGB(247, 150, 70)
+            ElseIf worksheet.Cells(1, index).Value = "ABP" Then
+                worksheet.Columns(index).Interior.Color = RGB(218, 231, 246)
+                worksheet.Range(worksheet.Cells(1, index), worksheet.Cells(2, index)).Interior.Color = RGB(83, 141, 213)
+            ElseIf worksheet.Cells(1, index).Value = "ACP" Then
+                worksheet.Columns(index).Interior.Color = RGB(246, 230, 230)
+                worksheet.Range(worksheet.Cells(1, index), worksheet.Cells(2, index)).Interior.Color = RGB(218, 150, 148)
+            ElseIf worksheet.Cells(1, index).Value = "CP" Then
+                worksheet.Columns(index).Interior.Color = RGB(238, 234, 242)
+                worksheet.Range(worksheet.Cells(1, index), worksheet.Cells(2, index)).Interior.Color = RGB(128, 100, 162)
+            ElseIf worksheet.Cells(1, index).Value = "CAC" Then
+                worksheet.Columns(index).Interior.Color = RGB(228, 223, 236)
+                worksheet.Range(worksheet.Cells(1, index), worksheet.Cells(2, index)).Interior.Color = RGB(228, 223, 236)
+            ElseIf worksheet.Cells(1, index).Value = "HRC" Then
+                worksheet.Columns(index).Interior.Color = RGB(228, 228, 228)
+                worksheet.Range(worksheet.Cells(1, index), worksheet.Cells(2, index)).Interior.Color = RGB(178, 178, 178)
+            ElseIf worksheet.Cells(1, index).Value = "HRP" Then
+                worksheet.Columns(index).Interior.Color = RGB(205, 233, 239)
+                worksheet.Range(worksheet.Cells(1, index), worksheet.Cells(2, index)).Interior.Color = RGB(49, 134, 155)
+            ElseIf worksheet.Cells(1, index).Value = "TC" Then
+                worksheet.Columns(index).Interior.Color = RGB(241, 245, 231)
+                worksheet.Range(worksheet.Cells(1, index), worksheet.Cells(2, index)).Interior.Color = RGB(196, 215, 155)
+            End If
+            index = index + 1
+        Loop Until index > role_count + 6
 
-        worksheet.Range("A1:N2").Font.Bold = True
+        worksheet.Range("A1:S2").Font.Bold = True
 
-        worksheet.Range("A2:N2").Borders(Excel.XlBordersIndex.xlEdgeBottom).LineStyle = Excel.XlLineStyle.xlContinuous
+        worksheet.Range("A2:S2").Borders(Excel.XlBordersIndex.xlEdgeBottom).LineStyle = Excel.XlLineStyle.xlContinuous
 
         worksheet.Range("A3:" & max_cell_txt).Borders(Excel.XlBordersIndex.xlInsideHorizontal).LineStyle = Excel.XlLineStyle.xlDot
         worksheet.Range("A3:" & max_cell_txt).Borders(Excel.XlBordersIndex.xlInsideHorizontal).ThemeColor = 1
         worksheet.Range("A3:" & max_cell_txt).Borders(Excel.XlBordersIndex.xlInsideHorizontal).TintAndShade = -0.14996795556505
 
-        worksheet.Columns("G:N").HorizontalAlignment = Excel.XlHAlign.xlHAlignCenter
+        With worksheet.Range("A1:" & max_cell_txt).Font
+            .Size = 10
+        End With
 
-        worksheet.Range("G2:N2").Orientation = 90
+        worksheet.Columns("G:S").HorizontalAlignment = Excel.XlHAlign.xlHAlignCenter
+
+        worksheet.Range("G2:S2").Orientation = 90
 
         worksheet.Columns("A:A").WrapText = True
         worksheet.Columns("F:F").WrapText = True
 
         worksheet.Range("A2:" & max_cell_txt).Autofilter
+
+        worksheet.Autofilter.Sort.SortFields.Add(Key:=worksheet.Range("F3:F" & max_row), SortOn:=Excel.XlSortOn.xlSortOnValues, Order:=Excel.XlSortOrder.xlAscending, DataOption:=Excel.XlSortDataOption.xlSortNormal)
+        'worksheet.Sort.SortFields.Add(Key:=worksheet.Range("D3:D" & max_row), SortOn:=Excel.XlSortOn.xlSortOnValues, Order:=Excel.XlSortOrder.xlAscending, DataOption:=Excel.XlSortDataOption.xlSortNormal)
+
+        With worksheet.Autofilter.Sort
+            .Header = Excel.XlYesNoGuess.xlYes
+            .MatchCase = False
+            .Orientation = Excel.Constants.xlTopToBottom
+            .SortMethod = Excel.XlSortMethod.xlPinYin
+            .Apply
+        End With
 
         worksheet.PageSetup.PrintArea = "$A$1:" & max_cell_txt
         worksheet.PageSetup.Orientation = Excel.XlPageOrientation.xlLandscape
@@ -1292,7 +1466,14 @@ Module Module1
         worksheet.PageSetup.RightHeader = "&D"
 
         workbook.Save()
-        workbook.Close
+
+        If demo_mode = True Then
+            System.Threading.Thread.CurrentThread.Sleep(3000)
+        End If
+
+        If debug_mode = False Then
+            workbook.Close()
+        End If
 
         sSql = Nothing
         rec = Nothing
@@ -1301,127 +1482,114 @@ Module Module1
 
     End Function
 
-    Function generate_field_by_role_report(objExcel, conn, where_clause, file_path, worksheet_name, record_count)
-        Dim sSql
+    Function generate_field_report(objExcel, conn, where_clause, file_path, worksheet_name, record_count, demo_mode)
+        Dim sSql As String
         Dim rec As ADODB.Recordset
         Dim index As Integer
         Dim workbook
         Dim worksheet
+        Dim i As Integer
+        Dim j As Integer
+        Dim condition As String
+        Dim role_code As String
+        Dim field_description As String
+        Dim data_column_ct As Integer
+        Dim column_offset As Integer
+        Dim row_offset As Integer
+        Dim dataSql As String
+        Dim headerSql As String
+        Dim debug_mode As Boolean
+
+        sSql = ""
+        rec = New ADODB.Recordset
+        index = 0
+        condition = ""
+        role_code = ""
+        field_description = ""
+        row_offset = 3
+        column_offset = 6
+        data_column_ct = 0
+        dataSql = ""
+        headerSql = ""
+        debug_mode = False
+
+        If where_clause = "" Then
+            condition = ""
+        Else
+            condition = " WHERE unit = """ & where_clause & """"
+        End If
+
+        If worksheet_name = "Field By Role" Then
+            dataSql = "SELECT * FROM Workday_Role_Mapping_by_field_in_order_of_role" & condition
+            headerSql = "SELECT role_code, field_description  FROM fields WHERE order_field_by_role_asc is not null ORDER BY  `order_field_by_role_asc` asc"
+        Else
+            dataSql = "SELECT * FROM Workday_Role_Mapping_by_field_in_order_of_scenario" & condition
+            headerSql = "SELECT role_code, field_description  FROM fields WHERE order_field_by_scenario_asc is not null ORDER BY  `order_field_by_scenario_asc` asc"
+        End If
 
         rec = New ADODB.Recordset
-        sSql = "SELECT * FROM Workday_Role_Mapping_by_field_in_order_of_role" & where_clause
-        'Debug.WriteLine(sSql)
-        rec.Open(sSql, conn)
+        'Debug.WriteLine(dataSql)
+        rec.Open(dataSql, conn)
         generate_worksheet(objExcel, rec, file_path, worksheet_name)
         rec.Close()
 
         workbook = objExcel.Workbooks.Open(file_path)
-        objExcel.Visible = False
         worksheet = workbook.Worksheets(worksheet_name)
 
-        Dim max_column_txt = worksheet.Cells(1, 49).Address
-        Dim max_cell_txt = worksheet.Cells(record_count + 3, 49).Address
+        If debug_mode = True Then
+            objExcel.Visible = True
+            worksheet.Activate
+        End If
 
-        worksheet.Columns("A:A").ColumnWidth = 40
+        If demo_mode = True Then
+            objExcel.Visible = True
+            worksheet.Activate
+        End If
+
+        worksheet.Columns("A:A").ColumnWidth = 38
         worksheet.Columns("B:B").ColumnWidth = 8
         worksheet.Columns("C:C").ColumnWidth = 15
         worksheet.Columns("D:D").ColumnWidth = 15
         worksheet.Columns("E:E").ColumnWidth = 10
-        worksheet.Columns("F:F").ColumnWidth = 50
+        worksheet.Columns("F:F").ColumnWidth = 48
         worksheet.Columns("G:AW").ColumnWidth = 3
 
+        column_offset = 6 ' the number of fields before data
+
         worksheet.Rows("1").Insert
         worksheet.Rows("1").Insert
 
-        worksheet.Cells(1, 7).Value = "I9"
-        worksheet.Cells(1, 8).Value = "ABP"
-        worksheet.Cells(1, 9).Value = "ABP"
-        worksheet.Cells(1, 10).Value = "ABP"
-        worksheet.Cells(1, 11).Value = "ABP"
-        worksheet.Cells(1, 12).Value = "ABP"
-        worksheet.Cells(1, 13).Value = "ACP"
-        worksheet.Cells(1, 14).Value = "ACP"
-        worksheet.Cells(1, 15).Value = "ACP"
-        worksheet.Cells(1, 16).Value = "ACP"
-        worksheet.Cells(1, 17).Value = "ACP"
-        worksheet.Cells(1, 18).Value = "ACP"
-        worksheet.Cells(1, 19).Value = "ACP"
-        worksheet.Cells(1, 20).Value = "CP"
-        worksheet.Cells(1, 21).Value = "CAC"
-        worksheet.Cells(1, 22).Value = "CAC"
-        worksheet.Cells(1, 23).Value = "CAC"
-        worksheet.Cells(1, 24).Value = "HRC"
-        worksheet.Cells(1, 25).Value = "HRC"
-        worksheet.Cells(1, 26).Value = "HRC"
-        worksheet.Cells(1, 27).Value = "HRC"
-        worksheet.Cells(1, 28).Value = "HRC"
-        worksheet.Cells(1, 29).Value = "HRC"
-        worksheet.Cells(1, 30).Value = "HRC"
-        worksheet.Cells(1, 31).Value = "HRC"
-        worksheet.Cells(1, 32).Value = "HRC"
-        worksheet.Cells(1, 33).Value = "HRC"
-        worksheet.Cells(1, 34).Value = "HRC"
-        worksheet.Cells(1, 35).Value = "HRC"
-        worksheet.Cells(1, 36).Value = "HRC"
-        worksheet.Cells(1, 37).Value = "HRC"
-        worksheet.Cells(1, 38).Value = "HRC"
-        worksheet.Cells(1, 39).Value = "HRC"
-        worksheet.Cells(1, 40).Value = "HRC"
-        worksheet.Cells(1, 41).Value = "HRC"
-        worksheet.Cells(1, 42).Value = "HRP"
-        worksheet.Cells(1, 43).Value = "HRP"
-        worksheet.Cells(1, 44).Value = "HRP"
-        worksheet.Cells(1, 45).Value = "HRP"
-        worksheet.Cells(1, 46).Value = "HRP"
-        worksheet.Cells(1, 47).Value = "TC"
-        worksheet.Cells(1, 48).Value = "TC"
-        worksheet.Cells(1, 49).Value = "TC"
+        'Debug.WriteLine(headerSql)
+        rec.Open(headerSql, conn)
+        If (rec.BOF And rec.EOF) Then
+            Debug.WriteLine("No records found.")
+        Else
+            Do While Not rec.EOF
+                i = 0
+                For Each fld In rec.Fields
+                    If i = 0 Then
+                        role_code = fld.value
+                    Else
+                        field_description = fld.value
+                    End If
+                    i = i + 1
+                Next fld
+                i = 0
+                j = j + 1
+                worksheet.cells(1, j + column_offset).Value = role_code
+                worksheet.cells(2, j + column_offset).Value = field_description
+                rec.MoveNext()
+            Loop
+        End If
+        rec.Close()
+        data_column_ct = j
 
-        worksheet.Cells(2, 7).Value = "7. 3A. Verify I-9"
-        worksheet.Cells(2, 8).Value = "4A. 2A. Review leaves of absence"
-        worksheet.Cells(2, 9).Value = "4B. 2A. Verify ee's FMLA eligibility"
-        worksheet.Cells(2, 10).Value = "4B. 3A. Enter time offs for ee"
-        worksheet.Cells(2, 11).Value = "4C. 3A. Enter time offs for faculty"
-        worksheet.Cells(2, 12).Value = "8A. 2B. Review time off balances"
-        worksheet.Cells(2, 13).Value = "5B. 3A. Review in Dean's Office"
-        worksheet.Cells(2, 14).Value = "6B. Review faculty hire"
-        worksheet.Cells(2, 15).Value = "8B. 2A. Review academic termination"
-        worksheet.Cells(2, 16).Value = "11A. 3A. Or 3B. Review lateral"
-        worksheet.Cells(2, 17).Value = "11A. 3A. Or 3B. Review lateral"
-        worksheet.Cells(2, 18).Value = "11B. 3A or 3B. Review academic appointment"
-        worksheet.Cells(2, 19).Value = "11B. 3A or 3B. Review academic appointment"
-        worksheet.Cells(2, 20).Value = "10. 3A. Review promotion"
-        worksheet.Cells(2, 21).Value = "6A. 3A. Assign costing allocations"
-        worksheet.Cells(2, 22).Value = "6B. 3A. Assing costing allocations"
-        worksheet.Cells(2, 23).Value = "12. 4A. Assign costing allocations"
-        worksheet.Cells(2, 24).Value = "5A. 2B. Create staff position"
-        worksheet.Cells(2, 25).Value = "5A. 4A. Create requistion for staff"
-        worksheet.Cells(2, 26).Value = "5B. 2B. Create academic position"
-        worksheet.Cells(2, 27).Value = "5B. 4A. Create requisition for faculty"
-        worksheet.Cells(2, 28).Value = "6B. 1A. Enter faculty hire and appointment"
-        worksheet.Cells(2, 29).Value = "8A. 1B. Initiate staff termination"
-        worksheet.Cells(2, 30).Value = "8A. Run reports on terimation"
-        worksheet.Cells(2, 31).Value = "8B. 1B. Initiate academic termiation"
-        worksheet.Cells(2, 32).Value = "8B. 3A. Offboard and end academic appointment"
-        worksheet.Cells(2, 33).Value = "8b. 4A. Run reports on termination"
-        worksheet.Cells(2, 34).Value = "8C. 4A. Offboard"
-        worksheet.Cells(2, 35).Value = "9A. 2A. Initiate data change"
-        worksheet.Cells(2, 36).Value = "9B. 2A. Initiate Transfer"
-        worksheet.Cells(2, 37).Value = "10. 2A. Initiate promotion"
-        worksheet.Cells(2, 38).Value = "11A. 2A. Initiate lateral"
-        worksheet.Cells(2, 39).Value = "11A. 4A. Add academic appointment"
-        worksheet.Cells(2, 40).Value = "11B. 2A. Add academnic appointment"
-        worksheet.Cells(2, 41).Value = "12. 2A. Initiate data change"
-        worksheet.Cells(2, 42).Value = "6A. 2A. Review staff hire"
-        worksheet.Cells(2, 43).Value = "8A. 2A. Review termination reason"
-        worksheet.Cells(2, 44).Value = "8C. 3A. Review termination and route to UWHR"
-        worksheet.Cells(2, 45).Value = "9A. 3A. Review data change"
-        worksheet.Cells(2, 46).Value = "12. 3A. Review data change"
-        worksheet.Cells(2, 47).Value = "1. 2C. Make work sched changes"
-        worksheet.Cells(2, 48).Value = "1. 3B. Make ad hoc work sched changes"
-        worksheet.Cells(2, 49).Value = "2. 2A. Run time entry reports"
+        Dim total_rows = record_count + row_offset
+        Dim total_columns = column_offset + data_column_ct
+        Dim max_column_txt = worksheet.Cells(1, column_offset + data_column_ct).Address
+        Dim max_cell_txt = worksheet.Cells(total_rows, total_columns).Address
 
-        index = 7
+        index = column_offset
         Do
             If worksheet.Cells(1, index).Value = "I9" Then
                 worksheet.Columns(index).Interior.Color = RGB(253, 228, 207)
@@ -1449,13 +1617,17 @@ Module Module1
                 worksheet.Range(worksheet.Cells(1, index), worksheet.Cells(3, index)).Interior.Color = RGB(196, 215, 155)
             End If
             index = index + 1
-        Loop Until index > 50
+        Loop Until index > column_offset + data_column_ct
 
         worksheet.Range("A1:AW3").Font.Bold = True
         worksheet.Range("A3:AW3").Borders(Excel.XlBordersIndex.xlEdgeBottom).LineStyle = Excel.XlLineStyle.xlContinuous
 
         Dim Dataset = worksheet.Range("A4:" & max_cell_txt)
         Dim entire_sheet = worksheet.Range("A1:" & max_cell_txt)
+
+        With worksheet.Range("A1:" & max_cell_txt).Font
+            .Size = 10
+        End With
 
         worksheet.Range("A4:" & max_cell_txt).Borders(Excel.XlBordersIndex.xlInsideHorizontal).LineStyle = Excel.XlLineStyle.xlDot
         worksheet.Range("A4:" & max_cell_txt).Borders(Excel.XlBordersIndex.xlInsideHorizontal).ThemeColor = 1
@@ -1468,194 +1640,17 @@ Module Module1
         worksheet.Columns("A:A").WrapText = True
         worksheet.Columns("F:F").WrapText = True
 
-        worksheet.PageSetup.PrintArea = "$A$1:" & max_cell_txt
-        worksheet.PageSetup.Orientation = Excel.XlPageOrientation.xlLandscape
-        worksheet.PageSetup.PaperSize = Excel.XlPaperSize.xlPaper11x17
-        worksheet.PageSetup.PrintTitleRows = "$1:$3"
-        worksheet.PageSetup.PrintTitleColumns = "$A:$G"
-        worksheet.PageSetup.CenterHeader = where_clause & Chr(10) & worksheet_name
-        worksheet.PageSetup.RightHeader = "&D"
 
-        workbook.Save()
-        workbook.Close
+        worksheet.Autofilter.Sort.SortFields.Add(Key:=worksheet.Range("F3:F" & total_rows), SortOn:=Excel.XlSortOn.xlSortOnValues, Order:=Excel.XlSortOrder.xlAscending, DataOption:=Excel.XlSortDataOption.xlSortNormal)
+        'worksheet.Sort.SortFields.Add(Key:=worksheet.Range("D3:D" & max_row), SortOn:=Excel.XlSortOn.xlSortOnValues, Order:=Excel.XlSortOrder.xlAscending, DataOption:=Excel.XlSortDataOption.xlSortNormal)
 
-        sSql = Nothing
-        rec = Nothing
-        index = Nothing
-        workbook = Nothing
-        worksheet = Nothing
-
-    End Function
-
-    Function generate_field_by_scenario_report(objExcel, conn, where_clause, file_path, worksheet_name, record_count)
-        Dim sSql
-        Dim rec As ADODB.Recordset
-        Dim workbook
-        Dim worksheet
-        Dim index
-
-        rec = New ADODB.Recordset
-        sSql = "SELECT * FROM Workday_Role_Mapping_by_field_in_order_of_scenario " & where_clause
-        'Debug.WriteLine(sSql)
-        rec.Open(sSql, conn)
-        generate_worksheet(objExcel, rec, file_path, worksheet_name)
-        rec.Close()
-
-        workbook = objExcel.Workbooks.Open(file_path)
-        objExcel.Visible = False
-        worksheet = workbook.Worksheets(worksheet_name)
-
-        Dim max_column_txt = worksheet.Cells(1, 49).Address
-        Dim max_cell_txt = worksheet.Cells(record_count + 3, 49).Address
-
-        worksheet.Columns("A:A").ColumnWidth = 40
-        worksheet.Columns("B:B").ColumnWidth = 8
-        worksheet.Columns("C:C").ColumnWidth = 15
-        worksheet.Columns("D:D").ColumnWidth = 15
-        worksheet.Columns("E:E").ColumnWidth = 10
-        worksheet.Columns("F:F").ColumnWidth = 50
-
-        worksheet.Columns("G:AW").ColumnWidth = 3
-
-        worksheet.Rows("1").Insert
-        worksheet.Rows("1").Insert
-        'worksheet.Range("G2:N2").Cut
-        worksheet.Cells(1, 7).Value = "TC"
-        worksheet.Cells(1, 8).Value = "TC"
-        worksheet.Cells(1, 9).Value = "TC"
-        worksheet.Cells(1, 10).Value = "ABP"
-        worksheet.Cells(1, 11).Value = "ABP"
-        worksheet.Cells(1, 12).Value = "ABP"
-        worksheet.Cells(1, 13).Value = "ABP"
-        worksheet.Cells(1, 14).Value = "HRC"
-        worksheet.Cells(1, 15).Value = "HRC"
-        worksheet.Cells(1, 16).Value = "HRC"
-        worksheet.Cells(1, 17).Value = "ACP"
-        worksheet.Cells(1, 18).Value = "HRC"
-        worksheet.Cells(1, 19).Value = "HRP"
-        worksheet.Cells(1, 20).Value = "CAC"
-        worksheet.Cells(1, 21).Value = "HRC"
-        worksheet.Cells(1, 22).Value = "CAC"
-        worksheet.Cells(1, 23).Value = "ACP"
-        worksheet.Cells(1, 24).Value = "I9"
-        worksheet.Cells(1, 25).Value = "HRC"
-        worksheet.Cells(1, 26).Value = "HRP"
-        worksheet.Cells(1, 27).Value = "ABP"
-        worksheet.Cells(1, 28).Value = "HRC"
-        worksheet.Cells(1, 29).Value = "HRC"
-        worksheet.Cells(1, 30).Value = "ACP"
-        worksheet.Cells(1, 31).Value = "HRC"
-        worksheet.Cells(1, 32).Value = "HRC"
-        worksheet.Cells(1, 33).Value = "HRP"
-        worksheet.Cells(1, 34).Value = "HRC"
-        worksheet.Cells(1, 35).Value = "HRC"
-        worksheet.Cells(1, 36).Value = "HRP"
-        worksheet.Cells(1, 37).Value = "HRC"
-        worksheet.Cells(1, 38).Value = "HRC"
-        worksheet.Cells(1, 39).Value = "CP"
-        worksheet.Cells(1, 40).Value = "HRC"
-        worksheet.Cells(1, 41).Value = "ACP"
-        worksheet.Cells(1, 42).Value = "ACP"
-        worksheet.Cells(1, 43).Value = "HRC"
-        worksheet.Cells(1, 44).Value = "HRC"
-        worksheet.Cells(1, 45).Value = "ACP"
-        worksheet.Cells(1, 46).Value = "ACP"
-        worksheet.Cells(1, 47).Value = "HRC"
-        worksheet.Cells(1, 48).Value = "HRP"
-        worksheet.Cells(1, 49).Value = "CAC"
-
-
-        worksheet.Cells(2, 7).Value = "1. 2C. Make work sched changes"
-        worksheet.Cells(2, 8).Value = "1. 3B. Make ad hoc work sched changes"
-        worksheet.Cells(2, 9).Value = "2. 2A. Run time entry reports"
-        worksheet.Cells(2, 10).Value = "4A. 2A. Review leaves of absence"
-        worksheet.Cells(2, 11).Value = "4B. 2A. Verify ee's FMLA eligibility"
-        worksheet.Cells(2, 12).Value = "4B. 3A. Enter time offs for ee"
-        worksheet.Cells(2, 13).Value = "4C. 3A. Enter time offs for faculty"
-        worksheet.Cells(2, 14).Value = "5A. 2B. Create staff position"
-        worksheet.Cells(2, 15).Value = "5A. 4A. Create requistion for staff"
-        worksheet.Cells(2, 16).Value = "5B. 2B. Create academic position"
-        worksheet.Cells(2, 17).Value = "5B. 3A. Review in Dean's Office"
-        worksheet.Cells(2, 18).Value = "5B. 4A. Create requisition for faculty"
-        worksheet.Cells(2, 19).Value = "6A. 2A. Review staff hire"
-        worksheet.Cells(2, 20).Value = "6A. 3A. Assign costing allocations"
-        worksheet.Cells(2, 21).Value = "6B. 1A. Enter faculty hire and appointment"
-        worksheet.Cells(2, 22).Value = "6B. 3A. Assing costing allocations"
-        worksheet.Cells(2, 23).Value = "6B. Review faculty hire"
-        worksheet.Cells(2, 24).Value = "7. 3A. Verify I-9"
-        worksheet.Cells(2, 25).Value = "8A. 1B. Initiate staff termination"
-        worksheet.Cells(2, 26).Value = "8A. 2A. Review termination reason"
-        worksheet.Cells(2, 27).Value = "8A. 2B. Review time off balances"
-        worksheet.Cells(2, 28).Value = "8A. Run reports on terimation"
-        worksheet.Cells(2, 29).Value = "8B. 1B. Initiate academic termiation"
-        worksheet.Cells(2, 30).Value = "8B. 2A. Review academic termination"
-        worksheet.Cells(2, 31).Value = "8B. 3A. Offboard and end academic appointment"
-        worksheet.Cells(2, 32).Value = "8b. 4A. Run reports on termination"
-        worksheet.Cells(2, 33).Value = "8C. 3A. Review termination and route to UWHR"
-        worksheet.Cells(2, 34).Value = "8C. 4A. Offboard"
-        worksheet.Cells(2, 35).Value = "9A. 2A. Initiate data change"
-        worksheet.Cells(2, 36).Value = "9A. 3A. Review data change"
-        worksheet.Cells(2, 37).Value = "9B. 2A. Initiate Transfer"
-        worksheet.Cells(2, 38).Value = "10. 2A. Initiate promotion"
-        worksheet.Cells(2, 39).Value = "10. 3A. Review promotion"
-        worksheet.Cells(2, 40).Value = "11A. 2A. Initiate lateral"
-        worksheet.Cells(2, 41).Value = "11A. 3A. Or 3B. Review lateral"
-        worksheet.Cells(2, 42).Value = "11A. 3A. Or 3B. Review lateral"
-        worksheet.Cells(2, 43).Value = "11A. 4A. Add academic appointment"
-        worksheet.Cells(2, 44).Value = "11B. 2A. Add academnic appointment"
-        worksheet.Cells(2, 45).Value = "11B. 3A or 3B. Review academic appointment"
-        worksheet.Cells(2, 46).Value = "11B. 3A or 3B. Review academic appointment"
-        worksheet.Cells(2, 47).Value = "12. 2A. Initiate data change"
-        worksheet.Cells(2, 48).Value = "12. 3A. Review data change"
-        worksheet.Cells(2, 49).Value = "12. 4A. Assign costing allocations"
-
-        index = 7
-        Do
-            If worksheet.Cells(1, index).Value = "I9" Then
-                worksheet.Columns(index).Interior.Color = RGB(253, 228, 207)
-                worksheet.Range(worksheet.Cells(1, index), worksheet.Cells(3, index)).Interior.Color = RGB(247, 150, 70)
-            ElseIf worksheet.Cells(1, index).Value = "ABP" Then
-                worksheet.Columns(index).Interior.Color = RGB(218, 231, 246)
-                worksheet.Range(worksheet.Cells(1, index), worksheet.Cells(3, index)).Interior.Color = RGB(83, 141, 213)
-            ElseIf worksheet.Cells(1, index).Value = "ACP" Then
-                worksheet.Columns(index).Interior.Color = RGB(246, 230, 230)
-                worksheet.Range(worksheet.Cells(1, index), worksheet.Cells(3, index)).Interior.Color = RGB(218, 150, 148)
-            ElseIf worksheet.Cells(1, index).Value = "CP" Then
-                worksheet.Columns(index).Interior.Color = RGB(238, 234, 242)
-                worksheet.Range(worksheet.Cells(1, index), worksheet.Cells(3, index)).Interior.Color = RGB(128, 100, 162)
-            ElseIf worksheet.Cells(1, index).Value = "CAC" Then
-                worksheet.Columns(index).Interior.Color = RGB(228, 223, 236)
-                worksheet.Range(worksheet.Cells(1, index), worksheet.Cells(3, index)).Interior.Color = RGB(228, 223, 236)
-            ElseIf worksheet.Cells(1, index).Value = "HRC" Then
-                worksheet.Columns(index).Interior.Color = RGB(228, 228, 228)
-                worksheet.Range(worksheet.Cells(1, index), worksheet.Cells(3, index)).Interior.Color = RGB(178, 178, 178)
-            ElseIf worksheet.Cells(1, index).Value = "HRP" Then
-                worksheet.Columns(index).Interior.Color = RGB(205, 233, 239)
-                worksheet.Range(worksheet.Cells(1, index), worksheet.Cells(3, index)).Interior.Color = RGB(49, 134, 155)
-            ElseIf worksheet.Cells(1, index).Value = "TC" Then
-                worksheet.Columns(index).Interior.Color = RGB(241, 245, 231)
-                worksheet.Range(worksheet.Cells(1, index), worksheet.Cells(3, index)).Interior.Color = RGB(196, 215, 155)
-            End If
-            index = index + 1
-        Loop Until index > 50
-
-        Dim Dataset = worksheet.Range("A4:" & max_cell_txt)
-        Dim entire_sheet = worksheet.Range("A1:" & max_cell_txt)
-
-        worksheet.Range("A1:AW3").Font.Bold = True
-
-        worksheet.Range("A3:AW3").Borders(Excel.XlBordersIndex.xlEdgeBottom).LineStyle = Excel.XlLineStyle.xlContinuous
-
-        worksheet.Range("A4:" & max_cell_txt).Borders(Excel.XlBordersIndex.xlInsideHorizontal).LineStyle = Excel.XlLineStyle.xlDot
-        worksheet.Range("A4:" & max_cell_txt).Borders(Excel.XlBordersIndex.xlInsideHorizontal).ThemeColor = 1
-        worksheet.Range("A4:" & max_cell_txt).Borders(Excel.XlBordersIndex.xlInsideHorizontal).TintAndShade = -0.14996795556505
-
-        worksheet.Columns("G:AW").HorizontalAlignment = Excel.XlHAlign.xlHAlignCenter
-
-        worksheet.Range("G2:AW2").Orientation = 90
-        worksheet.Range("A3:" & max_cell_txt).Autofilter
-        worksheet.Columns("A:A").WrapText = True
-        worksheet.Columns("F:F").WrapText = True
+        With worksheet.Autofilter.Sort
+            .Header = Excel.XlYesNoGuess.xlYes
+            .MatchCase = False
+            .Orientation = Excel.Constants.xlTopToBottom
+            .SortMethod = Excel.XlSortMethod.xlPinYin
+            .Apply
+        End With
 
         worksheet.PageSetup.PrintArea = "$A$1:" & max_cell_txt
         worksheet.PageSetup.Orientation = Excel.XlPageOrientation.xlLandscape
@@ -1666,7 +1661,14 @@ Module Module1
         worksheet.PageSetup.RightHeader = "&D"
 
         workbook.Save()
-        workbook.Close
+
+        If demo_mode = True Then
+            System.Threading.Thread.CurrentThread.Sleep(3000)
+        End If
+
+        If debug_mode = False Then
+            workbook.Close()
+        End If
 
         sSql = Nothing
         rec = Nothing
@@ -1676,23 +1678,60 @@ Module Module1
 
     End Function
 
-
-    Function generate_role_confirmation_tool(objExcel, conn, where_clause, file_path, worksheet_name, record_count)
-        Dim sSql
+    Function generate_role_confirmation_tool(objExcel, conn, where_clause, file_path, worksheet_name, record_count, demo_mode)
+        Dim sSql As String
         Dim rec As ADODB.Recordset
         Dim workbook
         Dim worksheet
+        Dim condition As String
+        Dim debug_mode As Boolean
+        Dim role_title As String
+        Dim role_description As String
+        Dim role_code As String
+        Dim field_count As Integer
+        Dim i As Integer
+        Dim j As Integer
 
+        sSql = ""
         rec = New ADODB.Recordset
-        sSql = "SELECT * FROM Workday_Role_Mapping_By_Role_Transpose " & where_clause
+        'workbook 
+        'worksheet
+        condition = ""
+        debug_mode = True
+        role_title = ""
+        role_description = ""
+        role_code = ""
+        field_count = 0
+        i = 0
+        j = 0
+
+        If where_clause = "" Then
+            condition = ""
+        Else
+            condition = " WHERE unit = """ & where_clause & """"
+        End If
+
+        sSql = "SELECT * FROM Workday_Role_Mapping_By_Role_Transpose" & condition
         rec.Open(sSql, conn)
 
-        Dim field_count = rec.Fields.Count
+        field_count = rec.Fields.Count
         generate_transposed_worksheet(objExcel, rec, file_path, worksheet_name, record_count)
         rec.Close()
 
         workbook = objExcel.Workbooks.Open(file_path)
         worksheet = workbook.Worksheets(worksheet_name)
+
+        If debug_mode = True Then
+            objExcel.Visible = True
+            worksheet.Activate
+            worksheet.Cells(1, 1).Activate
+        End If
+
+        If demo_mode = True Then
+            objExcel.Visible = True
+            worksheet.Activate
+            worksheet.Cells(1, 1).Select
+        End If
 
         worksheet.Columns(1).Insert
         worksheet.Columns(1).Insert
@@ -1704,51 +1743,33 @@ Module Module1
 
         'worksheet.Range("G2:N2").Cut
 
-        worksheet.Cells(1, 1).Value = "Code"
-        worksheet.Cells(2, 1).Value = "I9"
-        worksheet.Cells(3, 1).Value = "AC"
-        worksheet.Cells(4, 1).Value = "ABP"
-        worksheet.Cells(5, 1).Value = "AD"
-        worksheet.Cells(6, 1).Value = "AE"
-        worksheet.Cells(7, 1).Value = "ACP"
-        worksheet.Cells(8, 1).Value = "CP"
-        worksheet.Cells(9, 1).Value = "CAC"
-        worksheet.Cells(10, 1).Value = "HRC"
-        worksheet.Cells(11, 1).Value = "HRE"
-        worksheet.Cells(12, 1).Value = "HRP"
-        worksheet.Cells(13, 1).Value = "RP"
-        worksheet.Cells(14, 1).Value = "TC"
-
-        worksheet.Cells(1, 2).Value = "Workday Role"
-        worksheet.Cells(2, 2).Value = "I-9 Coordinator"
-        worksheet.Cells(3, 2).Value = "Absence Partner"
-        worksheet.Cells(4, 2).Value = "Academic Chair"
-        worksheet.Cells(5, 2).Value = "Academic Dean"
-        worksheet.Cells(6, 2).Value = "Academic Executive"
-        worksheet.Cells(7, 2).Value = "Academic Partner"
-        worksheet.Cells(8, 2).Value = "Compensation Partner"
-        worksheet.Cells(9, 2).Value = "Costing Allocations Coordinator"
-        worksheet.Cells(10, 2).Value = "HR Coordinator"
-        worksheet.Cells(11, 2).Value = "HR Executive"
-        worksheet.Cells(12, 2).Value = "HR Partner"
-        worksheet.Cells(13, 2).Value = "Recruiting Partner"
-        worksheet.Cells(14, 2).Value = "Time Coordinator"
-
-        worksheet.Cells(1, 3).Value = "Role Description"
-        worksheet.Cells(2, 3).Value = "Collects I-9 information for their assigned organization and verifies that I-9 information is valid."
-        worksheet.Cells(3, 3).Value = "This role performs absence management tasks for assigned organizations.  May enter time off for a worker. May request and return employee from a leave of absence."
-        worksheet.Cells(4, 3).Value = "This role is responsible for determining organizational objectives department level.  May approve HR related actions within their assigned supervisory organizations."
-        worksheet.Cells(5, 3).Value = "This role is responsible for determining organizational objectives at the school, college, and/or campus level.  Approves HR transactions related to academic personnel across multiple supervisory organizations."
-        worksheet.Cells(6, 3).Value = "This role can view all HR setup and operational data for assigned organizations.  This role is the highest departmental role and has approval authority for Workday business processes related to academic personnel."
-        worksheet.Cells(7, 3).Value = "This role has administrative responsibilities related to a group of academic personnel designated by supervisory organization.  Has review and/or approval authority for Workday business processes related to academic personnel."
-        worksheet.Cells(8, 3).Value = "This role has compensation related duties For a group of employees for assigned supervisory organizations."
-        worksheet.Cells(9, 3).Value = "This role enters costing allocation information for employees and is responsible for payroll transactions within a department; they also have the ability to change budgets."
-        worksheet.Cells(10, 3).Value = "This individual has administrative responsibilities for a group of employees designated by a supervisory organization.  Can initiate most HR-related actions."
-        worksheet.Cells(11, 3).Value = "This role can view all HR setup and operational data for assigned organizations.  This role is the highest departmental role and has approval authority for Workday business processes related to personnel"
-        worksheet.Cells(12, 3).Value = "This role has administrative responsibilities related to a group of employees designated by supervisory organization.  Has review and/or approval authority for Workday business processes."
-        worksheet.Cells(13, 3).Value = "This individual is a skilled professional responsible for sourcing, screening, recruiting, and executing recruitment activities for assigned supervisory organizations."
-        worksheet.Cells(14, 3).Value = "This role performs timesheet management functions for assigned organizations.  May correct time and enter time for worker.   Runs reports to ensure all timesheets are entered and approved."
-
+        sSql = "SELECT role_code, role_title, role_description FROM roles WHERE role_order is not null ORDER BY  `role_order` asc"
+        Debug.WriteLine(sSql)
+        rec.Open(sSql, conn)
+        If (rec.BOF And rec.EOF) Then
+            Debug.WriteLine("No records found.")
+        Else
+            Do While Not rec.EOF
+                i = 0
+                For Each fld In rec.Fields
+                    If i = 0 Then
+                        role_code = fld.value
+                    ElseIf i = 1 Then
+                        role_title = fld.value
+                    Else
+                        role_description = fld.value
+                    End If
+                    i = i + 1
+                Next fld
+                i = 0
+                j = j + 1
+                worksheet.cells(j + 1, 1).Value = role_code
+                worksheet.cells(j + 1, 2).Value = role_title
+                worksheet.cells(j + 1, 3).Value = role_description
+                rec.MoveNext()
+            Loop
+        End If
+        rec.Close()
 
         Dim max_column_txt = worksheet.Cells(1, record_count + 3).Address
         Dim max_cell_txt = worksheet.Cells(14, record_count + 3).Address
@@ -1771,6 +1792,10 @@ Module Module1
         worksheet.Range("D1:" & max_column_txt).WrapText = True
 
         Dim selection = worksheet.Range("A1:" & max_cell_txt)
+
+        With worksheet.Range("A1:" & max_cell_txt).Font
+            .Size = 10
+        End With
 
         With selection.Borders(Excel.XlBordersIndex.xlEdgeLeft)
             .LineStyle = Excel.XlLineStyle.xlContinuous
@@ -1862,10 +1887,15 @@ Module Module1
         worksheet.PageSetup.CenterHeader = where_clause & Chr(10) & worksheet_name
         worksheet.PageSetup.RightHeader = "&D"
 
-        worksheet.cells(1, 1).activate
-
         workbook.Save()
-        workbook.Close
+
+        If demo_mode = True Then
+            System.Threading.Thread.CurrentThread.Sleep(3000)
+        End If
+
+        If debug_mode = False Then
+            workbook.Close()
+        End If
 
         sSql = Nothing
         rec = Nothing
@@ -1956,8 +1986,13 @@ Module Module1
         Dim fieldCount
         Dim recArray
         Dim recCount
+        Dim debug_mode
 
-        objExcel.Visible = False
+        debug_mode = False
+
+        If debug_mode = True Then
+            objExcel.Visible = True
+        End If
         objExcel.DisplayAlerts = 0 ' Don't display any messages about conversion and so forth
         Workbook = objExcel.Workbooks.Open(file_path)
         Worksheet = Workbook.Worksheets(worksheet_name)
