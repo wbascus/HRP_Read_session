@@ -72,7 +72,7 @@ Module Module1
             conn.Open("Provider=Microsoft.ACE.OLEDB.12.0;Data Source=C:\submissions\Session_responses.accdb")
         End If
 
-        results = process_Folder(objExcel, conn, folder_path, demo_mode)
+        results = process_Folder(objExcel, conn, folder_path, demo_mode, db)
 
         'test a single file
         'Process_workbook("20151110-160531 Working in Workday Session 1 - Data Collection Tool College of Arts And Sciences_Linguistics" & ".xlsm", objExcel, conn)    'Session 1 test
@@ -108,7 +108,7 @@ Module Module1
 
     End Sub
 
-    Function process_Folder(objExcel, conn, folderpath, demo_mode) As Integer()
+    Function process_Folder(objExcel, conn, folderpath, demo_mode, db) As Integer()
 
         'results(0) = 'Total number of files read
         'results(1) = 'Total number of new files
@@ -178,7 +178,7 @@ Module Module1
 
             If (rec.BOF And rec.EOF) Then                                                   'if the file name has not been recorded
                 Debug.WriteLine("Processing " & file_count + 1 & ":  " & folderpath & "\" & FileNameWithExt & "...")
-                workbook_results = Process_workbook(FileNameWithExt, folderpath, objExcel, conn, demo_mode)
+                workbook_results = Process_workbook(FileNameWithExt, folderpath, objExcel, conn, demo_mode, db)
 
                 If (workbook_results(0) > 0) Then
                     successful_adds = successful_adds + 1
@@ -240,7 +240,7 @@ Module Module1
 
     End Function
 
-    Function Process_workbook(filename, folder_path, objExcel, conn, demo_mode) As Integer()
+    Function Process_workbook(filename, folder_path, objExcel, conn, demo_mode, db) As Integer()
 
         'workbook_results(0)    = 1 File was inserted 0 file was not inserted
         'workbook_results(1)    = There was an error in format - number of worksheets was not what was expected
@@ -461,7 +461,7 @@ Module Module1
                 Next
                 rec.Close()
 
-                process_scenario_results = Process_scenarios(objExcel, workbook, conn, submittalID, file_ext, session_no, demo_mode)
+                process_scenario_results = Process_scenarios(objExcel, workbook, conn, submittalID, file_ext, session_no, demo_mode, db)
 
                 workbook_results(0) = process_scenario_results(0)   'Successful_field_reads
                 'workbook_results(3) = process_scenario_results(1)   'blank_field_ct_non-academic
@@ -550,7 +550,7 @@ Module Module1
 
     End Function
 
-    Function Process_scenarios(objExcel, workbook, conn, submittalID, file_ext, session_no, demo_mode) As Integer()
+    Function Process_scenarios(objExcel, workbook, conn, submittalID, file_ext, session_no, demo_mode, db) As Integer()
 
         'process_scenarios(0) = Count of successful scenarios
         'process_scenarios(1) = Blank Field Count
@@ -601,7 +601,7 @@ Module Module1
                 field_definition(4) = "6,4B ,4B,2A,2A,6,3"
                 field_definition(5) = "6,4B ,4B,3A,3A,12,3"
                 field_definition(6) = "7,4C ,4C,3A,3A,6,3"
-                read_field_results = read_field(objExcel, field_definition, workbook, conn, submittalID, demo_mode)
+                read_field_results = read_field(objExcel, field_definition, workbook, conn, submittalID, demo_mode, db)
 
             ElseIf session_no = 2 Then                                                             'Session 2
                 Dim field_definition(0 To 20) As String                             'xlsm session 2
@@ -626,7 +626,7 @@ Module Module1
                 field_definition(18) = "8,8B ,8B,4A,4A,23,3"
                 field_definition(19) = "9,8C ,8C,2A,2A,5,3"
                 field_definition(20) = "9,8C ,8C,3A,3A,11,3"
-                read_field_results = read_field(objExcel, field_definition, workbook, conn, submittalID, demo_mode)
+                read_field_results = read_field(objExcel, field_definition, workbook, conn, submittalID, demo_mode, db)
             ElseIf session_no = 3 Then                                                             'Session 3
                 Dim field_definition(0 To 14) As String                             'xlsm session 3
                 field_definition(0) = "2,9A ,9A,2A,2A,4,3"
@@ -645,7 +645,7 @@ Module Module1
                 field_definition(12) = "8,12 ,12,2A,2A,4,3"
                 field_definition(13) = "8,12 ,12,3A,3A,10,3"
                 field_definition(14) = "8,12 ,12,4A,4A,16,3"
-                read_field_results = read_field(objExcel, field_definition, workbook, conn, submittalID, demo_mode)
+                read_field_results = read_field(objExcel, field_definition, workbook, conn, submittalID, demo_mode, db)
             ElseIf session_no = 0 Then
                 file_structure_issue = "x"
             End If
@@ -660,7 +660,7 @@ Module Module1
                 field_definition(4) = "6,4B ,4B,2A,2A,6,3"
                 field_definition(5) = "6,4B ,4B,3A,3A,12,3"
                 field_definition(6) = "7,4C ,4C,3A,3A,6,3"
-                read_field_results = read_field(objExcel, field_definition, workbook, conn, submittalID, demo_mode)
+                read_field_results = read_field(objExcel, field_definition, workbook, conn, submittalID, demo_mode, db)
             ElseIf session_no = 2 Then                                                             'Session 2
                 Dim field_definition(0 To 20) As String                         'xlsx session 2
                 field_definition(0) = "2,5A ,5A,2B,2B,5,3"
@@ -693,7 +693,7 @@ Module Module1
 
                 field_definition(19) = "9,8C ,8C,2A,2A,5,3"
                 field_definition(20) = "9,8C ,8C,3A,3A,11,3"
-                read_field_results = read_field(objExcel, field_definition, workbook, conn, submittalID, demo_mode)
+                read_field_results = read_field(objExcel, field_definition, workbook, conn, submittalID, demo_mode, db)
             ElseIf session_no = 3 Then                                                             'Session 3
                 Dim field_definition(0 To 14) As String                      'xlsx Session 3
                 field_definition(0) = "2,9A ,9A,2A,2A,5,3"
@@ -718,7 +718,7 @@ Module Module1
                 field_definition(12) = "8,12 ,12,2A,2A,6,3"
                 field_definition(13) = "8,12 ,12,3A,3A,12,3"
                 field_definition(14) = "8,12 ,12,4A,4A,18,3"
-                read_field_results = read_field(objExcel, field_definition, workbook, conn, submittalID, demo_mode)
+                read_field_results = read_field(objExcel, field_definition, workbook, conn, submittalID, demo_mode, db)
             ElseIf session_no = 0 Then
                 file_structure_issue = "x"
             End If
@@ -793,7 +793,7 @@ Module Module1
 
     End Function
 
-    Function read_field(ObjExcel, field_definition, workbook, conn, submittalID, demo_mode) As String()
+    Function read_field(ObjExcel, field_definition, workbook, conn, submittalID, demo_mode, db) As String()
 
         'Returns a file field string array
 
@@ -855,7 +855,7 @@ Module Module1
             startRow = CInt(foo(5))
             startCol = CInt(foo(6))
 
-            collect_field_results = collect_field(ObjExcel, workbook, conn, submittalID, worksheet, worksheetName, scenario, field, orient_cell, startRow, startCol, demo_mode)
+            collect_field_results = collect_field(ObjExcel, workbook, conn, submittalID, worksheet, worksheetName, scenario, field, orient_cell, startRow, startCol, demo_mode, db)
 
             If CInt(collect_field_results(0)) = 0 Then
                 If scenario = "4C" _
@@ -923,7 +923,7 @@ Module Module1
 
     End Function
 
-    Private Function collect_field(objExcel, workbook, conn, submittalID, worksheet, worksheetName, scenario, field, orient_cell, startRow, startCol, demo_mode) As String()
+    Private Function collect_field(objExcel, workbook, conn, submittalID, worksheet, worksheetName, scenario, field, orient_cell, startRow, startCol, demo_mode, db) As String()
 
         'Returns the number of field entries encountered.  Blank if 0
 
@@ -944,7 +944,7 @@ Module Module1
         Dim worksheet_name_error As String
         Dim worksheet_orient_error As String
         Dim results = {"", "", ""}   'index, worksheet_name_error, worksheet_orient_error
-        Dim r As Integer
+        Dim r
         Dim i As Integer
 
 
@@ -965,7 +965,6 @@ Module Module1
         worksheet_name_error = ""
         worksheet_orient_error = ""
         results = {"", "", ""}   'index, worksheet_name_error, worksheet_orient_error
-        r = 0
         i = 0
         index = 0
 
@@ -1051,7 +1050,7 @@ Module Module1
                             eid = Trim(currentWorkSheet.Cells(curRow, curCol).Value)
                             If Not IsNothing(eid) Then
                                 eid = eid.ToString()
-                                eid = eid.replace("-", "")
+                                eid = eid.Replace("-", "")
                             End If
                             If demo_mode Then
                                 currentWorkSheet.Cells(curRow, curCol).Activate
