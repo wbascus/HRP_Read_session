@@ -79,8 +79,6 @@ Module Module1
         'Process_workbook("20151118- 1009 HFS - Session 3 - Data Collection - Working in Workday" & ".xlsx", objExcel, conn)    'Session 3 test
         'Process_workbook("20151118- 1009 HFS - Session 2 - Data Collection - Working in Workday" & ".xlsx", objExcel, conn)    'Session 2 test
 
-        'generate_excel_report(objExcel, conn, "Workday_Role_Mapping", "", demo_mode)  'file name, '
-
         'generate_error_report(objExcel, conn, "Error_report", "")
 
         'initiate_unit_reports(objExcel, conn, "C:\submissions\Unit Reports\", demo_mode)
@@ -117,24 +115,39 @@ Module Module1
         'results(2) = 'Files not added due to format
         'results(3) = 'Files not added due to content
 
-        Dim sSql
-        Dim file_count = 0
-        Dim folder_count = 0
+        Dim sSql As String
+        Dim file_count As Integer
+        Dim folder_count As Integer
         Dim rec As ADODB.Recordset
-        Dim FileNameWithExt
+        Dim FileNameWithExt As String
         Dim filenames
-        Dim results As Integer()
-        Dim workbook_results As Integer()
-        Dim successful_adds As Integer = 0
-        Dim error_format As Integer = 0
-        Dim error_content As Integer = 0
-        Dim blank_fields As Integer = 0
-        Dim blank_fields_academic As Integer = 0
-        Dim error_format_string = ""
-        Dim error_content_string = ""
+        Dim successful_adds As Integer
+        Dim error_format As Integer
+        Dim error_content As Integer
+        Dim blank_fields As Integer
+        Dim blank_fields_academic As Integer
+        Dim error_format_string As String
+        Dim error_content_string As String
         Dim not_added = 0
         Dim debug_state = False
+        Dim results As Integer()
+        Dim workbook_results As Integer()
 
+        sSql = ""
+        file_count = 0
+        folder_count = 0
+        rec = New ADODB.Recordset
+        FileNameWithExt = ""
+        'filenames = ""
+        successful_adds = 0
+        error_format = 0
+        error_content = 0
+        blank_fields = 0
+        blank_fields_academic = 0
+        error_format_string = ""
+        error_content_string = ""
+        not_added = 0
+        debug_state = False
         results = {0, 0, 0, 0, 0, 0}         'Total number of files in folder, Files not already input, files sucessful added, files not added, Files containing format errors, Files containing content errors
         workbook_results = {0, 0, 0, 0, 0}      'successful_reads, add_attempted, not_added, error_format, error_content
 
@@ -544,20 +557,31 @@ Module Module1
         'process_scenarios(1) = Blank Field Count Academic
 
 
-        Dim successful_field_reads = 0
-        Dim blank_field_txt = ""
-        Dim blank_field_txt_academic = ""
-        Dim blank_field_ct = 0
-        Dim blank_field_ct_academic = 0
-        Dim file_structure_issue = ""
-        Dim sSql
+        Dim successful_field_reads As Integer
+        Dim blank_field_txt As String
+        Dim blank_field_txt_academic As String
+        Dim blank_field_ct As Integer
+        Dim blank_field_ct_academic As Integer
+        Dim file_structure_issue As String
+        Dim sSql As String
+        Dim worksheet_name_error As String
+        Dim worksheet_orient_error As String
+        Dim index As Integer
+        Dim debug_state = False
         Dim process_scenarios_results As Integer()
         Dim read_field_results As String()
-        Dim worksheet_name_error = ""
-        Dim worksheet_orient_error = ""
-        Dim index = 0
-        Dim debug_state = False
 
+        successful_field_reads = 0
+        blank_field_txt = ""
+        blank_field_txt_academic = ""
+        blank_field_ct = 0
+        blank_field_ct_academic = 0
+        file_structure_issue = ""
+        sSql = ""
+        worksheet_name_error = ""
+        worksheet_orient_error = ""
+        index = 0
+        debug_state = False
         process_scenarios_results = {0, 0, 0}
         read_field_results = {"", "", "", "", "", "", ""} 'Data_found_ct, blank_field_txt, blank_field_ct, blank_field_academic_txt, blank_field_ct_academic, worksheet_name_error, worksheet_orient_error
 
@@ -578,6 +602,7 @@ Module Module1
                 field_definition(5) = "6,4B ,4B,3A,3A,12,3"
                 field_definition(6) = "7,4C ,4C,3A,3A,6,3"
                 read_field_results = read_field(objExcel, field_definition, workbook, conn, submittalID, demo_mode)
+
             ElseIf session_no = 2 Then                                                             'Session 2
                 Dim field_definition(0 To 20) As String                             'xlsm session 2
                 field_definition(0) = "2,5A ,5A,2B,2B,5,3"
@@ -795,6 +820,7 @@ Module Module1
         Dim worksheet_orient_error As String
         Dim read_field_results As String()
         Dim collect_field_results As String()
+        Dim debug_state As Boolean
 
         index = 0
         worksheet = 0
@@ -812,7 +838,7 @@ Module Module1
         worksheet_orient_error = "Orient cell errors: (s):(f):(oc);"
         read_field_results = {"", "", "", "", "", "", ""} 'Data_found_ct, blank_field_txt, blank_field_ct, blank_field_academic_txt, blank_field_ct_academic, worksheet_name_error, worksheet_orient_error
         collect_field_results = {"", "", ""}
-        Dim debug_state = False
+        debug_state = False
 
         If debug_state = True Then
             Debug.WriteLine("Reading fields for submittalID " & submittalID)
@@ -901,28 +927,47 @@ Module Module1
 
         'Returns the number of field entries encountered.  Blank if 0
 
-        Dim curRow
-        Dim curCol
+        Dim curRow As Integer
+        Dim curCol As Integer
         Dim currentWorkSheet
-        Dim first_name
-        Dim last_name
-        Dim eid
+        Dim first_name As String
+        Dim last_name As String
+        Dim eid As String
         Dim org_team As String
-        Dim budget_no
-        Dim sSql
+        Dim budget_no As String
+        Dim sSql As String
         Dim rec As ADODB.Recordset
         Dim responseID As Integer
-        Dim org_team_mapID
-        Dim index
+        Dim org_team_mapID As Integer
+        Dim index As Integer
         Dim debug_state = False
-        Dim worksheet_name_error = ""
-        Dim worksheet_orient_error = ""
+        Dim worksheet_name_error As String
+        Dim worksheet_orient_error As String
         Dim results = {"", "", ""}   'index, worksheet_name_error, worksheet_orient_error
-        Dim r
-        Dim i
+        Dim r As Integer
+        Dim i As Integer
 
-        index = 0
+
+        curRow = 0
+        curCol = 0
+        'currentWorkSheet
+        first_name = ""
+        last_name = ""
+        eid = ""
+        org_team = ""
+        budget_no = ""
+        sSql = ""
+        rec = New ADODB.Recordset
+        responseID = 0
         org_team_mapID = 0
+        index = 0
+        debug_state = False
+        worksheet_name_error = ""
+        worksheet_orient_error = ""
+        results = {"", "", ""}   'index, worksheet_name_error, worksheet_orient_error
+        r = 0
+        i = 0
+        index = 0
 
         rec = New ADODB.Recordset
 
@@ -1159,48 +1204,6 @@ Module Module1
         Next X
 
         TransposeDim = tempArray
-    End Function
-
-    Function generate_excel_report(objExcel, conn, file_name, where_clause, demo_mode)
-        Dim file_path = ""
-        Dim folder = "C:\submissions\"
-        Dim file_ext = ".xlsx"
-        Dim workbook
-        Dim worksheet
-        Dim record_count = 1960
-
-        file_path = folder & file_name & file_ext
-
-        Debug.WriteLine("Generating " & file_name & file_ext & "...")
-
-        objExcel.Visible = False
-        objExcel.DisplayAlerts = 0 ' Don't display any messages about conversion and so forth
-        workbook = objExcel.Workbooks.Add
-        workbook.Sheets.Add
-        workbook.Sheets.Add
-        workbook.Sheets.Add
-        worksheet = workbook.Worksheets("Sheet4")
-        worksheet.Name = "Roles"
-        worksheet = workbook.Worksheets("Sheet3")
-        worksheet.Name = "Field by Role"
-        worksheet = workbook.Worksheets("Sheet2")
-        worksheet.Name = "Field by Scenario"
-        worksheet = workbook.Worksheets("Sheet1")
-        worksheet.Name = "Role Confirmation Tool"
-        workbook.SaveAs(FileName:=file_path)
-
-        generate_field_report(objExcel, conn, where_clause, file_path, "Field by Role", record_count, demo_mode, workbook)
-        generate_field_report(objExcel, conn, where_clause, file_path, "Field by Scenario", record_count, demo_mode, workbook)
-        generate_by_role_report(objExcel, conn, where_clause, file_path, "Roles", record_count, demo_mode, workbook)
-
-        workbook.Close()
-
-        workbook = Nothing
-        worksheet = Nothing
-        folder = Nothing
-        file_ext = Nothing
-        file_path = Nothing
-
     End Function
 
     Function generate_error_report(objExcel, conn, file_name, where_clause)
