@@ -23,6 +23,7 @@ Module Module1
         Dim dev_mode As Boolean
         Dim demo_mode As Boolean
         Dim reset As Boolean
+        Dim db As String
 
         objExcel = New Excel.Application
         conn = New ADODB.Connection
@@ -41,18 +42,19 @@ Module Module1
         elapsed_time_minutes = 0
         elapsed_time_seconds = 0
         folder_path = ""
-        dev_mode = False
+        dev_mode = True
         reset = False
-        demo_mode = True
+        demo_mode = False
+        db = ""
 
         If dev_mode = True Then
             folder_path = "\\sharepoint.washington.edu@SSL\DavWWWRoot\oim\proj\HRPayroll\Imp\Supervisory Org Cleanup\Role_mapping_2\Submittals"
             conn.Open("Provider=Microsoft.ACE.OLEDB.12.0;Data Source=C:\Role_Mapping_2\Session_responses_2.accdb")
             If reset = True Then
-                sSql = "DELETE * FROM submittals"
+                sSql = "DELETE * FROM " & db & " submittals"
                 'Debug.WriteLine(sSql)
                 'conn.Execute(sSql)
-                sSql = "DELETE * FROM rejected_submittals"
+                sSql = "DELETE * FROM rejected_" & db & " submittals"
                 'Debug.WriteLine(sSql)
                 'conn.Execute(sSql)
                 sSql = "DELETE * FROM responses"
@@ -70,7 +72,7 @@ Module Module1
             conn.Open("Provider=Microsoft.ACE.OLEDB.12.0;Data Source=C:\submissions\Session_responses.accdb")
         End If
 
-        'results = process_Folder(objExcel, conn, folder_path)
+        results = process_Folder(objExcel, conn, folder_path, demo_mode)
 
         'test a single file
         'Process_workbook("20151110-160531 Working in Workday Session 1 - Data Collection Tool College of Arts And Sciences_Linguistics" & ".xlsm", objExcel, conn)    'Session 1 test
@@ -83,7 +85,7 @@ Module Module1
 
         'initiate_unit_reports(objExcel, conn, "C:\submissions\Unit Reports\", demo_mode)
 
-        generate_unit_report(objExcel, conn, "Housing and Food Services (Housing and Food Services)", "C:\submissions\Unit Reports\", demo_mode)  'file name, '
+        'generate_unit_report(objExcel, conn, "Housing and Food Services (Housing and Food Services)", "C:\submissions\Unit Reports\", demo_mode)  'file name, '
         'generate_unit_report(objExcel, conn, "Workday_Role_Mapping", "Applied Physics Lab (Applied Physics Lab)", 7)  'file name, 
 
         conn.Close()
@@ -108,7 +110,7 @@ Module Module1
 
     End Sub
 
-    Function process_Folder(objExcel, conn, folderpath) As Integer()
+    Function process_Folder(objExcel, conn, folderpath, demo_mode) As Integer()
 
         'results(0) = 'Total number of files read
         'results(1) = 'Total number of new files
@@ -157,13 +159,13 @@ Module Module1
             folder_count = folder_count + 1
             FileNameWithExt = Mid$(fileName, InStrRev(fileName, "\") + 1)
             'Debug.WriteLine(FileNameWithExt)
-            sSql = "Select submittalID from submittals where file_name = """ & FileNameWithExt & """"
+            sSql = "Select submittalID from " & db & " submittals where file_name = """ & FileNameWithExt & """"
             'Debug.WriteLine(sSql)
             rec.Open(sSql, conn)
 
             If (rec.BOF And rec.EOF) Then                                                   'if the file name has not been recorded
                 Debug.WriteLine("Processing " & file_count + 1 & ":  " & folderpath & "\" & FileNameWithExt & "...")
-                workbook_results = Process_workbook(FileNameWithExt, folderpath, objExcel, conn)
+                workbook_results = Process_workbook(FileNameWithExt, folderpath, objExcel, conn, demo_mode)
 
                 If (workbook_results(0) > 0) Then
                     successful_adds = successful_adds + 1
@@ -225,7 +227,7 @@ Module Module1
 
     End Function
 
-    Function Process_workbook(filename, folder_path, objExcel, conn) As Integer()
+    Function Process_workbook(filename, folder_path, objExcel, conn, demo_mode) As Integer()
 
         'workbook_results(0)    = 1 File was inserted 0 file was not inserted
         'workbook_results(1)    = There was an error in format - number of worksheets was not what was expected
@@ -233,38 +235,61 @@ Module Module1
         'workbook_results(3)    = A count of blank fields
         'workbook_results(4)    = A count of blank fields related to academic Scenarios
 
-        Dim excelPath
-        Dim pathToFile
+        Dim excelPath As String
+        Dim pathToFile As String
         Dim worksheet
         Dim workbook
-        Dim sSql
+        Dim sSql As String
         Dim unit As String
-        Dim contact = ""
+        Dim contact As String
         Dim date_submitted As String
-        Dim submittalID
-        Dim worksheetCount = 0
-        Dim error_conditions = 0
-        Dim file_ext
+        Dim submittalID As Integer
+        Dim worksheetCount As Integer
+        Dim error_conditions As Integer
+        Dim file_ext As String
         Dim session_no As Integer
         Dim Error_identifying_information = False
         Dim Error_file_type = False
-        Dim process_scenario_results As Integer()
-        Dim successful_adds = 0
-        Dim error_format_ct = 0
-        Dim error_content_ct = 0
-        Dim error_content_bool = False
-        Dim error_format_bool = False
-        Dim workbook_results As Integer()
+        Dim successful_adds As Integer
+        Dim error_format_ct As Integer
+        Dim error_content_ct As Integer
+        Dim error_content_bool As Boolean
+        Dim error_format_bool As Boolean
         Dim rec As ADODB.Recordset
-        Dim debug_state = False
-        Dim add_attempted = 0
-        Dim not_added = 0
-        Dim unit_map_ID
+        Dim debug_state As Boolean
+        Dim add_attempted As Integer
+        Dim not_added As Integer
+        Dim unit_map_ID As Integer
+        Dim workbook_results As Integer()
+        Dim process_scenario_results As Integer()
 
+        excelPath = ""
+        pathToFile = ""
+        'worksheet
+        'workbook
+        sSql = ""
+        unit = ""
+        contact = ""
+        date_submitted = ""
+        submittalID = 0
+        worksheetCount = 0
+        error_conditions = 0
+        file_ext = ""
+        session_no = 0
+        Error_identifying_information = False
+        Error_file_type = False
+        successful_adds = 0
+        error_format_ct = 0
+        error_content_ct = 0
+        error_content_bool = False
+        error_format_bool = False
+        rec = New ADODB.Recordset
+        debug_state = False
+        add_attempted = 0
+        not_added = 0
+        unit_map_ID = 0
         workbook_results = {0, 0, 0, 0, 0}      'successful_reads, add_attempted, not_added, error_format, error_content
         process_scenario_results = {0, 0, 0}
-
-        rec = New ADODB.Recordset
 
         pathToFile = folder_path & "\" & filename
 
@@ -273,10 +298,15 @@ Module Module1
 
         If debug_state = True Then
             Debug.WriteLine("Process_workbook()...")
+            objExcel.Visible = True
+            objExcel.DisplayAlerts = 0 ' Don't display any messages about conversion and so forth
         End If
 
-        objExcel.Visible = False
-        objExcel.DisplayAlerts = 0 ' Don't display any messages about conversion and so forth
+        If demo_mode = True Then
+            objExcel.Visible = True
+            System.Threading.Thread.CurrentThread.Sleep(500)
+        End If
+
         Try
             workbook = objExcel.Workbooks.Open(pathToFile)
         Catch ex As Exception
@@ -284,21 +314,49 @@ Module Module1
         End Try
 
         If Not IsNothing(workbook) Then
-            workbook = objExcel.ActiveWorkbook
+            'workbook = objExcel.ActiveWorkbook
             worksheet = workbook.Worksheets(1)
+            If demo_mode Then
+                worksheet.Activate
+                System.Threading.Thread.CurrentThread.Sleep(500)
+            End If
 
             'Collect Identifying info
             Dim start_row = 4
             Dim start_col = 2
+
+            If demo_mode Then
+                worksheet.Cells(start_row, start_col).Select
+                System.Threading.Thread.CurrentThread.Sleep(500)
+            End If
             Do Until worksheet.Cells(start_row, start_col).Value = ""
                 If worksheet.Cells(start_row, start_col).Value = "Unit: " _
                     Or worksheet.Cells(start_row, start_col).Value = "Organization for which this was completed" Then
                     start_col = start_col + 1
+                    If demo_mode Then
+                        worksheet.Cells(start_row, start_col).Select
+                        System.Threading.Thread.CurrentThread.Sleep(500)
+                    End If
                 Else
                     unit = worksheet.Cells(4, start_col).Value
+                    If demo_mode Then
+                        worksheet.Cells(4, start_col).Select
+                        System.Threading.Thread.CurrentThread.Sleep(250)
+                    End If
                     contact = worksheet.Cells(6, start_col).Value
+                    If demo_mode Then
+                        worksheet.Cells(6, start_col).Select
+                        System.Threading.Thread.CurrentThread.Sleep(250)
+                    End If
                     date_submitted = worksheet.Cells(8, start_col).Value
+                    If demo_mode Then
+                        worksheet.Cells(8, start_col).Select
+                        System.Threading.Thread.CurrentThread.Sleep(250)
+                    End If
                     start_col = start_col + 1
+                End If
+                If demo_mode Then
+                    System.Threading.Thread.CurrentThread.Sleep(500)
                 End If
             Loop
 
@@ -313,6 +371,10 @@ Module Module1
 
             If worksheetCount > 1 Then
                 worksheet = objExcel.ActiveWorkbook.Worksheets(2)
+                If demo_mode Then
+                    worksheet.Activate
+                    System.Threading.Thread.CurrentThread.Sleep(500)
+                End If
                 If Left(worksheet.Name, 2) = "1 " Then                                             'Session 1
                     session_no = 1
                     file_ext = "xlsm"
@@ -373,27 +435,27 @@ Module Module1
 
 
                 'Add a record
-                sSql = "INSERT INTO submittals (reported_unit, contact, date_submitted, date_recorded, file_name, session_no, unit_map_ID) VALUES (""" &
+                sSql = "INSERT INTO " & db & " submittals (reported_unit, contact, date_submitted, date_recorded, file_name, session_no, unit_map_ID) VALUES (""" &
                     unit & """, """ & contact & """, """ & date_submitted & """, """ & Format(Now, "MM/dd/yyyy") & """, """ & filename & """,""" & session_no.ToString & """,""" & unit_map_ID & """)"
                 'Debug.WriteLine(sSql)
                 conn.Execute(sSql)
 
                 'Identify the new record's ID
-                sSql = "Select max(submittalID) FROM submittals"
+                sSql = "Select max(submittalID) FROM " & db & " submittals"
                 rec.Open(sSql, conn)
                 For Each x In rec.Fields
                     submittalID = x.value
                 Next
                 rec.Close()
 
-                process_scenario_results = Process_scenarios(objExcel, workbook, conn, submittalID, file_ext, session_no)
+                process_scenario_results = Process_scenarios(objExcel, workbook, conn, submittalID, file_ext, session_no, demo_mode)
 
                 workbook_results(0) = process_scenario_results(0)   'Successful_field_reads
                 'workbook_results(3) = process_scenario_results(1)   'blank_field_ct_non-academic
                 'workbook_results(4) = process_scenario_results(2)   'blank_field_ct_academic
                 add_attempted = add_attempted + 1
 
-                sSql = "DELETE * FROM rejected_submittals WHERE filename = """ & filename & """"
+                sSql = "DELETE * FROM " & db & " rejected_submittals WHERE filename = """ & filename & """"
                 'Debug.WriteLine(sSql)
                 conn.Execute(sSql)
 
@@ -401,12 +463,12 @@ Module Module1
                 Debug.WriteLine("...Format and content check returned errors.  See error log for more information.")
                 not_added = not_added + 1
 
-                sSql = "Select rejected_submittalID from rejected_submittals where filename = """ & filename & """"
+                sSql = "Select rejected_submittalID from " & db & " rejected_submittals where filename = """ & filename & """"
                 'Debug.WriteLine(sSql)
                 rec.Open(sSql, conn)
 
                 If (rec.BOF And rec.EOF) Then                                                   'if the file name has not been recorded
-                    sSql = "INSERT INTO rejected_submittals (filename, content_error, format_error) values (""" & filename & """, " & error_content_bool & ", " & error_format_bool & ")"
+                    sSql = "INSERT INTO " & db & " rejected_submittals (filename, content_error, format_error) values (""" & filename & """, " & error_content_bool & ", " & error_format_bool & ")"
                     Debug.WriteLine(sSql)
                     conn.Execute(sSql)
                 End If
@@ -414,11 +476,16 @@ Module Module1
 
             End If
 
-            'Try
-            'workbook.Close()
-            'Catch ex As Exception
-            'Debug.WriteLine("Could not close workbook.")
-            'End Try
+            If demo_mode = True Then
+                System.Threading.Thread.CurrentThread.Sleep(500)
+            End If
+
+            Try
+                workbook.Close()
+            Catch ex As Exception
+                Debug.WriteLine("Could not close workbook.")
+            End Try
+
             workbook = Nothing
             worksheet = Nothing
 
@@ -470,7 +537,7 @@ Module Module1
 
     End Function
 
-    Function Process_scenarios(objExcel, workbook, conn, submittalID, file_ext, session_no) As Integer()
+    Function Process_scenarios(objExcel, workbook, conn, submittalID, file_ext, session_no, demo_mode) As Integer()
 
         'process_scenarios(0) = Count of successful scenarios
         'process_scenarios(1) = Blank Field Count
@@ -496,6 +563,7 @@ Module Module1
 
         If debug_state = True Then
             Debug.WriteLine("Processing Scenarios...")
+            objExcel.Visible = True
         End If
 
         If file_ext = "xlsm" Then                                                                  'non-mac formatted
@@ -509,7 +577,7 @@ Module Module1
                 field_definition(4) = "6,4B ,4B,2A,2A,6,3"
                 field_definition(5) = "6,4B ,4B,3A,3A,12,3"
                 field_definition(6) = "7,4C ,4C,3A,3A,6,3"
-                read_field_results = read_field(field_definition, workbook, conn, submittalID)
+                read_field_results = read_field(objExcel, field_definition, workbook, conn, submittalID, demo_mode)
             ElseIf session_no = 2 Then                                                             'Session 2
                 Dim field_definition(0 To 20) As String                             'xlsm session 2
                 field_definition(0) = "2,5A ,5A,2B,2B,5,3"
@@ -533,7 +601,7 @@ Module Module1
                 field_definition(18) = "8,8B ,8B,4A,4A,23,3"
                 field_definition(19) = "9,8C ,8C,2A,2A,5,3"
                 field_definition(20) = "9,8C ,8C,3A,3A,11,3"
-                read_field_results = read_field(field_definition, workbook, conn, submittalID)
+                read_field_results = read_field(objExcel, field_definition, workbook, conn, submittalID, demo_mode)
             ElseIf session_no = 3 Then                                                             'Session 3
                 Dim field_definition(0 To 14) As String                             'xlsm session 3
                 field_definition(0) = "2,9A ,9A,2A,2A,4,3"
@@ -552,7 +620,7 @@ Module Module1
                 field_definition(12) = "8,12 ,12,2A,2A,4,3"
                 field_definition(13) = "8,12 ,12,3A,3A,10,3"
                 field_definition(14) = "8,12 ,12,4A,4A,16,3"
-                read_field_results = read_field(field_definition, workbook, conn, submittalID)
+                read_field_results = read_field(objExcel, field_definition, workbook, conn, submittalID, demo_mode)
             ElseIf session_no = 0 Then
                 file_structure_issue = "x"
             End If
@@ -567,7 +635,7 @@ Module Module1
                 field_definition(4) = "6,4B ,4B,2A,2A,6,3"
                 field_definition(5) = "6,4B ,4B,3A,3A,12,3"
                 field_definition(6) = "7,4C ,4C,3A,3A,6,3"
-                read_field_results = read_field(field_definition, workbook, conn, submittalID)
+                read_field_results = read_field(objExcel, field_definition, workbook, conn, submittalID, demo_mode)
             ElseIf session_no = 2 Then                                                             'Session 2
                 Dim field_definition(0 To 20) As String                         'xlsx session 2
                 field_definition(0) = "2,5A ,5A,2B,2B,5,3"
@@ -600,7 +668,7 @@ Module Module1
 
                 field_definition(19) = "9,8C ,8C,2A,2A,5,3"
                 field_definition(20) = "9,8C ,8C,3A,3A,11,3"
-                read_field_results = read_field(field_definition, workbook, conn, submittalID)
+                read_field_results = read_field(objExcel, field_definition, workbook, conn, submittalID, demo_mode)
             ElseIf session_no = 3 Then                                                             'Session 3
                 Dim field_definition(0 To 14) As String                      'xlsx Session 3
                 field_definition(0) = "2,9A ,9A,2A,2A,5,3"
@@ -625,14 +693,13 @@ Module Module1
                 field_definition(12) = "8,12 ,12,2A,2A,6,3"
                 field_definition(13) = "8,12 ,12,3A,3A,12,3"
                 field_definition(14) = "8,12 ,12,4A,4A,18,3"
-                read_field_results = read_field(field_definition, workbook, conn, submittalID)
+                read_field_results = read_field(objExcel, field_definition, workbook, conn, submittalID, demo_mode)
             ElseIf session_no = 0 Then
                 file_structure_issue = "x"
             End If
         Else
             'Debug.WriteLine("The file was either Not an xlsm Or xlsx.")
         End If
-        objExcel.ActiveWorkbook.Close(SaveChanges:=False)
 
         successful_field_reads = CInt(read_field_results(0))
         blank_field_txt = read_field_results(1)
@@ -641,8 +708,6 @@ Module Module1
         blank_field_ct_academic = CInt(read_field_results(4))
         worksheet_name_error = read_field_results(5)
         worksheet_orient_error = read_field_results(6)
-
-
 
         If debug_state = True Then
             Debug.WriteLine("Sucessful Reads:" & successful_field_reads)
@@ -655,27 +720,27 @@ Module Module1
         End If
 
         If blank_field_ct > 0 Then
-            sSql = "UPDATE submittals SET blank_fields_non_academic = """ & blank_field_txt & """ WHERE submittalID = " & submittalID
+            sSql = "UPDATE " & db & " submittals SET blank_fields_non_academic = """ & blank_field_txt & """ WHERE submittalID = " & submittalID
             'Debug.WriteLine(sSql)
             conn.Execute(sSql)
 
         End If
 
         If blank_field_ct_academic > 0 Then
-            sSql = "UPDATE submittals SET blank_fields_academic = """ & blank_field_txt_academic & """ WHERE submittalID = " & submittalID
+            sSql = "UPDATE " & db & " submittals SET blank_fields_academic = """ & blank_field_txt_academic & """ WHERE submittalID = " & submittalID
             'Debug.WriteLine(sSql)
             conn.Execute(sSql)
 
         End If
 
         If worksheet_name_error <> "Worksheet name errors: (expected):(encountered);" Then
-            sSql = "UPDATE submittals SET worksheet_name_error = """ & worksheet_name_error & """ WHERE submittalID = " & submittalID
+            sSql = "UPDATE " & db & " submittals SET worksheet_name_error = """ & worksheet_name_error & """ WHERE submittalID = " & submittalID
             'Debug.WriteLine(sSql)
             conn.Execute(sSql)
         End If
 
         If worksheet_orient_error <> "Orient cell errors: (s):(f):(oc);" Then
-            sSql = "UPDATE submittals SET worksheet_orient_error = """ & worksheet_orient_error & """ WHERE submittalID = " & submittalID
+            sSql = "UPDATE " & db & " submittals SET worksheet_orient_error = """ & worksheet_orient_error & """ WHERE submittalID = " & submittalID
             'Debug.WriteLine(sSql)
             conn.Execute(sSql)
         End If
@@ -703,7 +768,7 @@ Module Module1
 
     End Function
 
-    Function read_field(field_definition, workbook, conn, submittalID) As String()
+    Function read_field(ObjExcel, field_definition, workbook, conn, submittalID, demo_mode) As String()
 
         'Returns a file field string array
 
@@ -764,7 +829,7 @@ Module Module1
             startRow = CInt(foo(5))
             startCol = CInt(foo(6))
 
-            collect_field_results = collect_field(workbook, conn, submittalID, worksheet, worksheetName, scenario, field, orient_cell, startRow, startCol)
+            collect_field_results = collect_field(ObjExcel, workbook, conn, submittalID, worksheet, worksheetName, scenario, field, orient_cell, startRow, startCol, demo_mode)
 
             If CInt(collect_field_results(0)) = 0 Then
                 If scenario = "4C" _
@@ -832,7 +897,7 @@ Module Module1
 
     End Function
 
-    Private Function collect_field(workbook, conn, submittalID, worksheet, worksheetName, scenario, field, orient_cell, startRow, startCol) As String()
+    Private Function collect_field(objExcel, workbook, conn, submittalID, worksheet, worksheetName, scenario, field, orient_cell, startRow, startCol, demo_mode) As String()
 
         'Returns the number of field entries encountered.  Blank if 0
 
@@ -867,23 +932,42 @@ Module Module1
             Debug.WriteLine("worksheet " & worksheet & "Not found.")
         End Try
 
-        'currentWorkSheet = workbook.Worksheets(worksheetName)        'Breaks if people modify the table names. 
+        If debug_state = True Then
+            objExcel.Visible = True
+        End If
+
+        If demo_mode = True Then
+            objExcel.Visible = True
+        End If
+
 
         'Debug.WriteLine("Reading " & scenario & ":" & field & " data from worksheet " & currentWorkSheet.Name)
 
         If Not IsNothing(currentWorkSheet) Then
             'Debug.WriteLine(Left(currentWorkSheet.name, 3) & " " & worksheetName)
+            If demo_mode Then
+                currentWorkSheet.Activate
+                currentWorkSheet.Cells(4, 2).Activate
+                System.Threading.Thread.CurrentThread.Sleep(500)
+            End If
+
             If Left(currentWorkSheet.name, 3) = worksheetName Then
                 r = currentWorkSheet.Cells.Find(What:=orient_cell)
                 If Not IsNothing(r) Then
-
+                    If demo_mode Then
+                        currentWorkSheet.Cells(r.row, r.column).Activate
+                        System.Threading.Thread.CurrentThread.Sleep(500)
+                    End If
                     'Debug.WriteLine("Column: " & r.column)
                     'Debug.WriteLine("Row: " & r.row)
                     'startRow = startRow
                     'startCol = startCol
                     startRow = r.row + 1
                     startCol = r.column
-
+                    If demo_mode Then
+                        currentWorkSheet.Cells(startRow, startCol).Activate
+                        System.Threading.Thread.CurrentThread.Sleep(500)
+                    End If
                     curRow = startRow
                     curCol = startCol
                     'Debug.WriteLine( "Start RC " & startRow &","& startCol
@@ -897,24 +981,47 @@ Module Module1
                             Or currentWorkSheet.Cells(curRow, curCol).Value = "n/a" _
                             Or currentWorkSheet.Cells(curRow, curCol).Value = "First Name(s)" Then
                             curCol = curCol + 1
+                            If demo_mode Then
+                                currentWorkSheet.Cells(curRow, curCol).Activate
+                                System.Threading.Thread.CurrentThread.Sleep(500)
+                            End If
                         Else
                             first_name = Trim(currentWorkSheet.Cells(curRow, curCol).Value)
+                            If demo_mode Then
+                                currentWorkSheet.Cells(curRow, curCol).Activate
+                                System.Threading.Thread.CurrentThread.Sleep(500)
+                            End If
                             curRow = curRow + 1
                             'Debug.WriteLine(first_name)
+
                             last_name = Trim(currentWorkSheet.Cells(curRow, curCol).Value)
+                            If demo_mode Then
+                                currentWorkSheet.Cells(curRow, curCol).Activate
+                                System.Threading.Thread.CurrentThread.Sleep(500)
+                            End If
                             curRow = curRow + 1
                             'Debug.WriteLine(last_name)
+
+
                             eid = Trim(currentWorkSheet.Cells(curRow, curCol).Value)
                             If Not IsNothing(eid) Then
                                 eid = eid.ToString()
                                 eid = eid.replace("-", "")
                             End If
-                            'Debug.WriteLine(eid)
+                            If demo_mode Then
+                                currentWorkSheet.Cells(curRow, curCol).Activate
+                                System.Threading.Thread.CurrentThread.Sleep(500)
+                            End If
                             curRow = curRow + 1
+                            'Debug.WriteLine(eid)
+
                             'Org Team
                             org_team = Trim(currentWorkSheet.Cells(curRow, curCol).Value)
                             'Debug.WriteLine(org_team)
-
+                            If demo_mode Then
+                                currentWorkSheet.Cells(curRow, curCol).Activate
+                                System.Threading.Thread.CurrentThread.Sleep(500)
+                            End If
                             sSql = "SELECT org_team_mapID from org_team_map where org_team = """ & org_team & """"
                             'Debug.WriteLine(sSql)
                             rec.Open(sSql, conn)
@@ -945,6 +1052,10 @@ Module Module1
                             curRow = curRow + 1
 
                             budget_no = currentWorkSheet.Cells(curRow, curCol).Value
+                            If demo_mode Then
+                                currentWorkSheet.Cells(curRow, curCol).Activate
+                                System.Threading.Thread.CurrentThread.Sleep(500)
+                            End If
                             curRow = curRow + 1
 
                             sSql = "SELECT max(responseID) from responses where org_team = """ & org_team & """ AND EID = """ & eid & """" & " AND submittalID = " & submittalID
@@ -980,6 +1091,7 @@ Module Module1
                             curCol = curCol + 1
                             index = index + 1
                             'Debug.WriteLine( "RC: " & curRow &","& curCol
+
                         End If
                     Loop
                 Else
@@ -1076,11 +1188,69 @@ Module Module1
         worksheet = workbook.Worksheets("Sheet1")
         worksheet.Name = "Role Confirmation Tool"
         workbook.SaveAs(FileName:=file_path)
+
+        generate_field_report(objExcel, conn, where_clause, file_path, "Field by Role", record_count, demo_mode, workbook)
+        generate_field_report(objExcel, conn, where_clause, file_path, "Field by Scenario", record_count, demo_mode, workbook)
+        generate_by_role_report(objExcel, conn, where_clause, file_path, "Roles", record_count, demo_mode, workbook)
+
         workbook.Close()
 
-        generate_field_report(objExcel, conn, where_clause, file_path, "Field by Role", record_count, demo_mode)
-        generate_field_report(objExcel, conn, where_clause, file_path, "Field by Scenario", record_count, demo_mode)
-        generate_by_role_report(objExcel, conn, where_clause, file_path, "Roles", record_count, demo_mode)
+        workbook = Nothing
+        worksheet = Nothing
+        folder = Nothing
+        file_ext = Nothing
+        file_path = Nothing
+
+    End Function
+
+    Function generate_error_report(objExcel, conn, file_name, where_clause)
+        Dim file_path = ""
+        Dim folder = "C: \submissions\"
+        Dim file_ext = ".xlsx"
+        Dim workbook
+        Dim worksheet
+
+        file_path = folder & file_name & file_ext
+
+        Debug.WriteLine("Generating " & file_name & file_ext & "...")
+
+        objExcel.Visible = False
+        objExcel.DisplayAlerts = 0 ' Don't display any messages about conversion and so forth
+        workbook = objExcel.Workbooks.Add
+        ' default sheet       'Identifying information not as expected
+        workbook.Sheets.Add   'Couldn't identify session
+        workbook.Sheets.Add   'Blank EIDs
+        workbook.Sheets.Add   'Malformed EIDs
+        workbook.Sheets.Add   'Unexpected Tab Name
+        workbook.Sheets.Add   'Can't center cursor on Start Row, Start Column
+
+        Dim Report_definition(0 To 5) As String
+        Report_definition(0) = "Sheet6,Missing identifying information,Select * from Errors_no_identifying_information"
+        Report_definition(1) = "Sheet5,Session Not identified,Select * from Errors_session_not_identified"
+        Report_definition(2) = "Sheet4,Blank EIDs,Select * from Errors_EID_blank"
+        Report_definition(3) = "Sheet3,Malformed EIDs,Select * from Errors_EID_malformed"
+        Report_definition(4) = "Sheet2,Unexpected tab name,Select * from Errors_worksheet_name"
+        Report_definition(5) = "Sheet1,Orient Cell Not encountered,Select * from Errors_worksheet_orient"
+
+        For Each report In Report_definition
+            Dim foo = Split(report, ",")
+            Dim sheet_name = foo(0)
+            Dim new_sheet_name = foo(1)
+            Dim sSql = foo(2)
+            worksheet = workbook.Worksheets(sheet_name)
+            worksheet.Name = new_sheet_name
+        Next
+
+        workbook.SaveAs(FileName:=file_path)
+        workbook.Close()
+
+        For Each report In Report_definition
+            Dim foo = Split(report, ",")
+            Dim sheet_name = foo(0)
+            Dim new_sheet_name = foo(1)
+            Dim sSql = foo(2)
+            generate_generic_report(objExcel, conn, sSql, file_path, new_sheet_name)
+        Next
 
         workbook = Nothing
         worksheet = Nothing
@@ -1177,7 +1347,7 @@ Module Module1
         unit = ""
         record_count = 0
         file_name = "Working In Workday"
-        debug_mode = False
+        debug_mode = True
 
         If Not IsNothing(where_clause) Then
 
@@ -1232,10 +1402,15 @@ Module Module1
         worksheet.Name = "Role Confirmation Tool"
         workbook.SaveAs(FileName:=file_path)
 
-        generate_by_role_report(objExcel, conn, where_clause, file_path, "Roles", record_count, demo_mode)
-        generate_field_report(objExcel, conn, where_clause, file_path, "Field by Role", record_count, demo_mode)
-        generate_field_report(objExcel, conn, where_clause, file_path, "Field by Scenario", record_count, demo_mode)
-        generate_role_confirmation_tool(objExcel, conn, where_clause, file_path, "Role Confirmation Tool", record_count, demo_mode)
+        workbook = generate_by_role_report(objExcel, conn, where_clause, file_path, "Roles", record_count, demo_mode, workbook)
+        workbook = generate_field_report(objExcel, conn, where_clause, file_path, "Field by Role", record_count, demo_mode, workbook)
+        workbook = generate_field_report(objExcel, conn, where_clause, file_path, "Field by Scenario", record_count, demo_mode, workbook)
+        workbook = generate_role_confirmation_tool(objExcel, conn, where_clause, file_path, "Role Confirmation Tool", record_count, demo_mode, workbook)
+
+        If demo_mode = False Then
+            workbook.Close()
+        End If
+
 
         workbook = Nothing
         worksheet = Nothing
@@ -1245,67 +1420,9 @@ Module Module1
 
     End Function
 
-    Function generate_error_report(objExcel, conn, file_name, where_clause)
-        Dim file_path = ""
-        Dim folder = "C: \submissions\"
-        Dim file_ext = ".xlsx"
-        Dim workbook
-        Dim worksheet
-
-        file_path = folder & file_name & file_ext
-
-        Debug.WriteLine("Generating " & file_name & file_ext & "...")
-
-        objExcel.Visible = False
-        objExcel.DisplayAlerts = 0 ' Don't display any messages about conversion and so forth
-        workbook = objExcel.Workbooks.Add
-        ' default sheet       'Identifying information not as expected
-        workbook.Sheets.Add   'Couldn't identify session
-        workbook.Sheets.Add   'Blank EIDs
-        workbook.Sheets.Add   'Malformed EIDs
-        workbook.Sheets.Add   'Unexpected Tab Name
-        workbook.Sheets.Add   'Can't center cursor on Start Row, Start Column
-
-        Dim Report_definition(0 To 5) As String
-        Report_definition(0) = "Sheet6,Missing identifying information,Select * from Errors_no_identifying_information"
-        Report_definition(1) = "Sheet5,Session Not identified,Select * from Errors_session_not_identified"
-        Report_definition(2) = "Sheet4,Blank EIDs,Select * from Errors_EID_blank"
-        Report_definition(3) = "Sheet3,Malformed EIDs,Select * from Errors_EID_malformed"
-        Report_definition(4) = "Sheet2,Unexpected tab name,Select * from Errors_worksheet_name"
-        Report_definition(5) = "Sheet1,Orient Cell Not encountered,Select * from Errors_worksheet_orient"
-
-        For Each report In Report_definition
-            Dim foo = Split(report, ",")
-            Dim sheet_name = foo(0)
-            Dim new_sheet_name = foo(1)
-            Dim sSql = foo(2)
-            worksheet = workbook.Worksheets(sheet_name)
-            worksheet.Name = new_sheet_name
-        Next
-
-        workbook.SaveAs(FileName:=file_path)
-        workbook.Close()
-
-        For Each report In Report_definition
-            Dim foo = Split(report, ",")
-            Dim sheet_name = foo(0)
-            Dim new_sheet_name = foo(1)
-            Dim sSql = foo(2)
-            generate_generic_report(objExcel, conn, sSql, file_path, new_sheet_name)
-        Next
-
-        workbook = Nothing
-        worksheet = Nothing
-        folder = Nothing
-        file_ext = Nothing
-        file_path = Nothing
-
-    End Function
-
-    Function generate_by_role_report(objExcel, conn, where_clause, file_path, worksheet_name, record_count, demo_mode)
+    Function generate_by_role_report(objExcel, conn, where_clause, file_path, worksheet_name, record_count, demo_mode, workbook)
         Dim sSql As String
         Dim rec As ADODB.Recordset
-        Dim workbook
         Dim worksheet
         Dim condition As String
         Dim index As Integer
@@ -1337,10 +1454,9 @@ Module Module1
 
         sSql = "SELECT * FROM Workday_Role_Mapping_by_role" & condition & " ORDER BY  `employee last name` asc"
         rec.Open(sSql, conn)
-        generate_worksheet(objExcel, rec, file_path, worksheet_name)
+        workbook = generate_worksheet(objExcel, rec, file_path, worksheet_name, workbook)
         rec.Close()
 
-        workbook = objExcel.Workbooks.Open(file_path)
         worksheet = workbook.Worksheets(worksheet_name)
 
         If debug_mode = True Then
@@ -1468,12 +1584,10 @@ Module Module1
         workbook.Save()
 
         If demo_mode = True Then
-            System.Threading.Thread.CurrentThread.Sleep(3000)
+            System.Threading.Thread.CurrentThread.Sleep(500)
         End If
 
-        If debug_mode = False Then
-            workbook.Close()
-        End If
+        Return workbook
 
         sSql = Nothing
         rec = Nothing
@@ -1482,11 +1596,10 @@ Module Module1
 
     End Function
 
-    Function generate_field_report(objExcel, conn, where_clause, file_path, worksheet_name, record_count, demo_mode)
+    Function generate_field_report(objExcel, conn, where_clause, file_path, worksheet_name, record_count, demo_mode, workbook)
         Dim sSql As String
         Dim rec As ADODB.Recordset
         Dim index As Integer
-        Dim workbook
         Dim worksheet
         Dim i As Integer
         Dim j As Integer
@@ -1530,10 +1643,9 @@ Module Module1
         rec = New ADODB.Recordset
         'Debug.WriteLine(dataSql)
         rec.Open(dataSql, conn)
-        generate_worksheet(objExcel, rec, file_path, worksheet_name)
+        workbook = generate_worksheet(objExcel, rec, file_path, worksheet_name, workbook)
         rec.Close()
 
-        workbook = objExcel.Workbooks.Open(file_path)
         worksheet = workbook.Worksheets(worksheet_name)
 
         If debug_mode = True Then
@@ -1663,12 +1775,10 @@ Module Module1
         workbook.Save()
 
         If demo_mode = True Then
-            System.Threading.Thread.CurrentThread.Sleep(3000)
+            System.Threading.Thread.CurrentThread.Sleep(500)
         End If
 
-        If debug_mode = False Then
-            workbook.Close()
-        End If
+        Return workbook
 
         sSql = Nothing
         rec = Nothing
@@ -1678,10 +1788,9 @@ Module Module1
 
     End Function
 
-    Function generate_role_confirmation_tool(objExcel, conn, where_clause, file_path, worksheet_name, record_count, demo_mode)
+    Function generate_role_confirmation_tool(objExcel, conn, where_clause, file_path, worksheet_name, record_count, demo_mode, workbook)
         Dim sSql As String
         Dim rec As ADODB.Recordset
-        Dim workbook
         Dim worksheet
         Dim condition As String
         Dim debug_mode As Boolean
@@ -1715,10 +1824,9 @@ Module Module1
         rec.Open(sSql, conn)
 
         field_count = rec.Fields.Count
-        generate_transposed_worksheet(objExcel, rec, file_path, worksheet_name, record_count)
+        workbook = generate_transposed_worksheet(objExcel, rec, file_path, worksheet_name, record_count, workbook)
         rec.Close()
 
-        workbook = objExcel.Workbooks.Open(file_path)
         worksheet = workbook.Worksheets(worksheet_name)
 
         If debug_mode = True Then
@@ -1890,12 +1998,10 @@ Module Module1
         workbook.Save()
 
         If demo_mode = True Then
-            System.Threading.Thread.CurrentThread.Sleep(3000)
+            System.Threading.Thread.CurrentThread.Sleep(500)
         End If
 
-        If debug_mode = False Then
-            workbook.Close()
-        End If
+        Return workbook
 
         sSql = Nothing
         rec = Nothing
@@ -1904,17 +2010,22 @@ Module Module1
 
     End Function
 
-    Function generate_worksheet(objExcel, recordset, file_path, worksheet_name)
-        Dim Workbook
+    Function generate_worksheet(objExcel, recordset, file_path, worksheet_name, workbook)
         Dim Worksheet
         Dim fieldCount
         Dim recArray
         Dim recCount
+        Dim debug_mode
 
-        objExcel.Visible = False
+        debug_mode = False
+
+        If debug_mode = True Then
+            objExcel.Visible = True
+        End If
+
+
         objExcel.DisplayAlerts = 0 ' Don't display any messages about conversion and so forth
-        Workbook = objExcel.Workbooks.Open(file_path)
-        Worksheet = Workbook.Worksheets(worksheet_name)
+        Worksheet = workbook.Worksheets(worksheet_name)
 
         ' Copy field names to the first row of the worksheet
         fieldCount = recordset.Fields.Count
@@ -1972,16 +2083,16 @@ Module Module1
         objExcel.Selection.CurrentRegion.Columns.AutoFit
         objExcel.Selection.CurrentRegion.Rows.AutoFit
 
-        Workbook.SaveAs(FileName:=file_path)
-        Workbook.Close()
+        workbook.SaveAs(FileName:=file_path)
 
-        Workbook = Nothing
+        Return workbook
+
+        workbook = Nothing
         Worksheet = Nothing
 
     End Function
 
-    Function generate_transposed_worksheet(objExcel, recordset, file_path, worksheet_name, record_count)
-        Dim Workbook
+    Function generate_transposed_worksheet(objExcel, recordset, file_path, worksheet_name, record_count, workbook)
         Dim Worksheet
         Dim fieldCount
         Dim recArray
@@ -1994,8 +2105,7 @@ Module Module1
             objExcel.Visible = True
         End If
         objExcel.DisplayAlerts = 0 ' Don't display any messages about conversion and so forth
-        Workbook = objExcel.Workbooks.Open(file_path)
-        Worksheet = Workbook.Worksheets(worksheet_name)
+        Worksheet = workbook.Worksheets(worksheet_name)
         Worksheet.Select
 
         ' Copy field names to the first row of the worksheet
@@ -2068,10 +2178,11 @@ Module Module1
         objExcel.Selection.CurrentRegion.Columns.AutoFit
         objExcel.Selection.CurrentRegion.Rows.AutoFit
 
-        Workbook.SaveAs(FileName:=file_path)
-        Workbook.Close()
+        workbook.SaveAs(FileName:=file_path)
 
-        Workbook = Nothing
+        Return workbook
+
+        workbook = Nothing
         Worksheet = Nothing
 
     End Function
@@ -2086,7 +2197,7 @@ Module Module1
 
         rec = New ADODB.Recordset
         rec.Open(sSql, conn)
-        generate_worksheet(objExcel, rec, file_path, worksheet_name)
+        generate_worksheet(objExcel, rec, file_path, worksheet_name, workbook)
 
         Debug.WriteLine("FindRecordCount :" & rec.Fields.Count)
         rec.Close()
