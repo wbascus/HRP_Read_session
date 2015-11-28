@@ -79,7 +79,8 @@ Module Module1
         'Process_workbook("20151110-160531 Working in Workday Session 1 - Data Collection Tool College of Arts And Sciences_Linguistics" & ".xlsm", objExcel, conn)    'Session 1 test
         'Process_workbook("20151118- 1009 HFS - Session 3 - Data Collection - Working in Workday" & ".xlsx", objExcel, conn)    'Session 3 test
         'Process_workbook("20151118- 1009 HFS - Session 2 - Data Collection - Working in Workday" & ".xlsx", objExcel, conn)    'Session 2 test
-
+        Process_workbook("20151123-1354 Applied Mathematics  Working in Workday - Session 3 - Data Collection Tool (Mac Compatible).xlsx",
+                          folder_path, objExcel, conn, demo_mode, db)
         'generate_error_report(objExcel, conn, "Error_report", "")
 
         'initiate_unit_reports(objExcel, conn, "C:\submissions\Unit Reports\", demo_mode)
@@ -87,7 +88,7 @@ Module Module1
         'generate_unit_report(objExcel, conn, "Housing and Food Services (Housing and Food Services)", "C:\submissions\Unit Reports\", demo_mode)  'file name, '
         'generate_unit_report(objExcel, conn, "Workday_Role_Mapping", "Applied Physics Lab (Applied Physics Lab)", 7)  'file name, 
 
-        ExportMsgFolderToExcel()
+        'ExportMsgFolderToExcel()
 
         conn.Close()
 
@@ -170,7 +171,7 @@ Module Module1
             folder_count = folder_count + 1
             FileNameWithExt = Mid$(fileName, InStrRev(fileName, "\") + 1)
             'Debug.WriteLine(FileNameWithExt)
-            sSql = "Select submittalID from " & db & " submittals where file_name = """ & FileNameWithExt & """"
+            sSql = "Select submittalID from " & db & " submittals where revised_truncated_file_name = """ & FileNameWithExt & """"
             'Debug.WriteLine(sSql)
             rec.Open(sSql, conn)
 
@@ -306,6 +307,7 @@ Module Module1
         unit_map_ID = 0
         workbook_results = {0, 0, 0, 0, 0}      'successful_reads, add_attempted, not_added, error_format, error_content
         process_scenario_results = {0, 0, 0}
+        demo_mode = True
 
         pathToFile = folder_path & "\" & filename
 
@@ -345,26 +347,30 @@ Module Module1
                 worksheet.Cells(start_row, start_col).Select
                 Threading.Thread.CurrentThread.Sleep(500)
             End If
-            Do Until worksheet.Cells(start_row, start_col).Value = ""
-                If worksheet.Cells(start_row, start_col).Value = "Unit: " _
-                    Or worksheet.Cells(start_row, start_col).Value = "Organization for which this was completed" Then
+            Do Until IsNothing(worksheet.Cells(start_row, start_col).value)
+                If worksheet.Cells(start_row, start_col).Value.ToString = "Unit: " _
+                    Or worksheet.Cells(start_row, start_col).Value.ToString = "Organization for which this was completed" Then
                     start_col = start_col + 1
+                    If start_col = 4 Then
+                        start_col = 2
+                        start_row = 5
+                    End If
                     If demo_mode Then
                         worksheet.Cells(start_row, start_col).Select
                         Threading.Thread.CurrentThread.Sleep(500)
                     End If
                 Else
-                    unit = worksheet.Cells(4, start_col).Value
+                    unit = worksheet.Cells(start_row, start_col).Value.ToString
                     If demo_mode Then
-                        worksheet.Cells(4, start_col).Select
+                        worksheet.Cells(start_row, start_col).Select
                         Threading.Thread.CurrentThread.Sleep(250)
                     End If
-                    contact = worksheet.Cells(6, start_col).Value
+                    contact = worksheet.Cells(6, start_col).Value.ToString
                     If demo_mode Then
                         worksheet.Cells(6, start_col).Select
                         Threading.Thread.CurrentThread.Sleep(250)
                     End If
-                    date_submitted = worksheet.Cells(8, start_col).Value
+                    date_submitted = worksheet.Cells(8, start_col).Value.ToString
                     If demo_mode Then
                         worksheet.Cells(8, start_col).Select
                         Threading.Thread.CurrentThread.Sleep(250)
@@ -970,6 +976,7 @@ Module Module1
         results = {"", "", ""}   'index, worksheet_name_error, worksheet_orient_error
         i = 0
         index = 0
+        demo_mode = False
 
         rec = New ADODB.Recordset
 
@@ -1020,20 +1027,20 @@ Module Module1
                     'Debug.WriteLine( "Start RC " & startRow &","& startCol
                     'Debug.WriteLine( "Current RC " & curRow &", "& curCol
 
-                    Do Until currentWorkSheet.Cells(curRow, curCol).Value = ""
-                        If currentWorkSheet.Cells(curRow, curCol).Value = "Ex: Elizabeth" _
-                            Or currentWorkSheet.Cells(curRow, curCol).Value = "EXAMPLE: Peter" _
-                            Or currentWorkSheet.Cells(curRow, curCol).Value = "EXAMPLE: Smith" _
-                            Or currentWorkSheet.Cells(curRow, curCol).Value = "N/A" _
-                            Or currentWorkSheet.Cells(curRow, curCol).Value = "n/a" _
-                            Or currentWorkSheet.Cells(curRow, curCol).Value = "First Name(s)" Then
+                    Do Until currentWorkSheet.Cells(curRow, curCol).Value.ToString = ""
+                        If currentWorkSheet.Cells(curRow, curCol).Value.ToString = "Ex: Elizabeth" _
+                            Or currentWorkSheet.Cells(curRow, curCol).Value.ToString = "EXAMPLE: Peter" _
+                            Or currentWorkSheet.Cells(curRow, curCol).Value.ToString = "EXAMPLE: Smith" _
+                            Or currentWorkSheet.Cells(curRow, curCol).Value.ToString = "N/A" _
+                            Or currentWorkSheet.Cells(curRow, curCol).Value.ToString = "n/a" _
+                            Or currentWorkSheet.Cells(curRow, curCol).Value.ToString = "First Name(s)" Then
                             curCol = curCol + 1
                             If demo_mode Then
                                 currentWorkSheet.Cells(curRow, curCol).Activate
                                 Threading.Thread.CurrentThread.Sleep(500)
                             End If
                         Else
-                            first_name = Trim(currentWorkSheet.Cells(curRow, curCol).Value)
+                            first_name = Trim(currentWorkSheet.Cells(curRow, curCol).Value.ToString)
                             If demo_mode Then
                                 currentWorkSheet.Cells(curRow, curCol).Activate
                                 Threading.Thread.CurrentThread.Sleep(500)
@@ -1041,7 +1048,7 @@ Module Module1
                             curRow = curRow + 1
                             'Debug.WriteLine(first_name)
 
-                            last_name = Trim(currentWorkSheet.Cells(curRow, curCol).Value)
+                            last_name = Trim(currentWorkSheet.Cells(curRow, curCol).Value.ToString)
                             If demo_mode Then
                                 currentWorkSheet.Cells(curRow, curCol).Activate
                                 Threading.Thread.CurrentThread.Sleep(500)
@@ -1050,7 +1057,7 @@ Module Module1
                             'Debug.WriteLine(last_name)
 
 
-                            eid = Trim(currentWorkSheet.Cells(curRow, curCol).Value)
+                            eid = Trim(currentWorkSheet.Cells(curRow, curCol).Value.ToString)
                             If Not IsNothing(eid) Then
                                 eid = eid.ToString()
                                 eid = eid.Replace("-", "")
@@ -1063,7 +1070,7 @@ Module Module1
                             'Debug.WriteLine(eid)
 
                             'Org Team
-                            org_team = Trim(currentWorkSheet.Cells(curRow, curCol).Value)
+                            org_team = Trim(currentWorkSheet.Cells(curRow, curCol).Value.ToString)
                             'Debug.WriteLine(org_team)
                             If demo_mode Then
                                 currentWorkSheet.Cells(curRow, curCol).Activate
@@ -1098,7 +1105,7 @@ Module Module1
                             rec.Close()
                             curRow = curRow + 1
 
-                            budget_no = Trim(currentWorkSheet.Cells(curRow, curCol).Value)
+                            budget_no = Trim(currentWorkSheet.Cells(curRow, curCol).Value.ToString)
                             budget_no = Replace(budget_no, "-", "")
                             budget_no = Replace(budget_no, "#", "")
                             budget_no = Replace(budget_no, " and", ",")
@@ -1308,7 +1315,7 @@ Module Module1
                 start_time = Now()
                 For Each fld In rec.Fields
                     If i = 0 Then
-                        Unit = fld.value
+                        Unit = fld.Value.ToString
                     Else
                         record_count = CInt(fld.value)
                     End If
