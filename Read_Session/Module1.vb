@@ -2,6 +2,7 @@
 Imports System.Text.RegularExpressions
 
 Module Module1
+
     Sub Main()
         Dim objExcel As Excel.Application       'the file we're going to read from
         Dim conn As ADODB.Connection
@@ -2268,16 +2269,25 @@ Module Module1
         Dim msg As Outlook.MailItem
         Dim nms As Outlook.NameSpace
         Dim folder As Outlook.MAPIFolder
-        Dim attachment_count As Integer
+        Dim conn As ADODB.Connection
+        Dim rec As ADODB.Recordset
+
+        conn = New ADODB.Connection
+        rec = New ADODB.Recordset
 
         strPath = "C:\submissions\"
-        'strPathAttachments = "\\sharepoint.washington.edu@SSL\DavWWWRoot\oim\proj\HRPayroll\Imp\Supervisory Org Cleanup\Role_Mapping_2\Submittals\"
+
 
         'Select export folder
         appOutlook = CreateObject("Outlook.Application")
         nms = appOutlook.GetNamespace("MAPI")
         'folder = nms.PickFolder
         folder = nms.GetFolderFromID("00000000156327CA9648CE489CF65CF10820403A0100E5BC31A858143943B4DFB26345E4937A0000A35DC2510000")
+
+        conn.Open("Provider=Microsoft.ACE.OLEDB.12.0;Data Source=C:\Role_Mapping_2\Session_responses_2.accdb")
+
+        Dim sSql = "Delete * FROM files"
+        'conn.Execute(sSql)
 
         'Handle potential errors with Select Folder dialog box.
         If folder Is Nothing Then
@@ -2329,7 +2339,8 @@ Module Module1
         conn = New ADODB.Connection
         rec = New ADODB.Recordset
         strSheet = "Working in Workday Submittal Attachment List.xlsx"
-        strPath = "C:\submissions\"
+        'strPath = "C:\submissions\"
+        strPath = "\\sharepoint.washington.edu@SSL\DavWWWRoot\oim\proj\HRPayroll\Imp\Supervisory Org Cleanup\Role_Mapping_2\"
         strSheet = strPath & strSheet
 
         conn.Open("Provider=Microsoft.ACE.OLEDB.12.0;Data Source=C:\Role_Mapping_2\Session_responses_2.accdb")
@@ -2402,12 +2413,13 @@ Module Module1
         Dim c
         Dim sender_name
         Dim subject
-        Dim received_time
+        Dim received_time As Date
         Dim file_name
         Dim results As Integer
         Dim strPathAttachments As String
 
-        strPathAttachments = "C:\submissions\Submittals\"
+        'strPathAttachments = "C:\submissions\Submittals\"
+        strPathAttachments = "\\sharepoint.washington.edu@SSL\DavWWWRoot\oim\proj\HRPayroll\Imp\Supervisory Org Cleanup\Role_Mapping_2\Submittals\"
         intColumnCounter = 0
         sender_email_address = ""
         truncated_file_name = ""
@@ -2433,8 +2445,6 @@ Module Module1
             For Each Attachment In myattachments
                 If Attachment.Type = 1 Then
                     If InStr(Attachment.FileName, ".xls") Then
-
-                        'Debug.WriteLine(IntRowCounter + a)
                         file_name = Attachment.FileName
                         truncated_file_name = Replace(Attachment.FileName, "...", "")
                         truncated_file_name = Replace(truncated_file_name, "..", ".")
@@ -2444,7 +2454,7 @@ Module Module1
                         truncated_file_name = Replace(truncated_file_name, "\", "")
                         truncated_file_name = Replace(truncated_file_name, "/", "")
                         truncated_file_name = Replace(truncated_file_name, "?", "")
-                        truncated_file_name = Format(msg.ReceivedTime, "yyyyMMdd-HHmmss") & " " & Right(truncated_file_name, 112)
+                        truncated_file_name = Format(received_time, "yyyyMMdd-HHmm") & " " & Right(truncated_file_name, 112)
 
                         sSql = "SELECT fileID FROM files WHERE truncated_file_name = """ & truncated_file_name & """"
                         'Debug.WriteLine(IntRowCounter + a)
@@ -2458,8 +2468,9 @@ Module Module1
                             & file_name & """,""" _
                             & truncated_file_name & """,""" _
                             & Now() & """)"
-                            'Debug.WriteLine(sSql)
+                            Debug.WriteLine(sSql)
                             conn.Execute(sSql)
+
                             Attachment.SaveAsFile(strPathAttachments & truncated_file_name)
                             'Debug.WriteLine(strPathAttachments & truncated_file_name)
 
