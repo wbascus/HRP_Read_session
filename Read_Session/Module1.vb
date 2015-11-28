@@ -72,7 +72,7 @@ Module Module1
             conn.Open("Provider=Microsoft.ACE.OLEDB.12.0;Data Source=C:\submissions\Session_responses.accdb")
         End If
 
-        results = process_Folder(objExcel, conn, folder_path, demo_mode, db)
+        'results = process_Folder(objExcel, conn, folder_path, demo_mode, db)
 
         'test a single file
         'Process_workbook("20151110-160531 Working in Workday Session 1 - Data Collection Tool College of Arts And Sciences_Linguistics" & ".xlsm", objExcel, conn)    'Session 1 test
@@ -86,6 +86,8 @@ Module Module1
         'generate_unit_report(objExcel, conn, "Housing and Food Services (Housing and Food Services)", "C:\submissions\Unit Reports\", demo_mode)  'file name, '
         'generate_unit_report(objExcel, conn, "Workday_Role_Mapping", "Applied Physics Lab (Applied Physics Lab)", 7)  'file name, 
 
+        ExportMsgFolderToExcel()
+
         conn.Close()
 
         If demo_mode = False Then
@@ -98,13 +100,8 @@ Module Module1
         elapsed_time_minutes = DateDiff("m", start_time, end_time) Mod 60
         elapsed_time_seconds = DateDiff("s", start_time, end_time) Mod 60
 
-        Debug.WriteLine("Read " & results(0) & " files in folder in " & elapsed_time_hours & ":" & elapsed_time_minutes & ":" & elapsed_time_seconds & " seconds")
-        Console.WriteLine("Read " & results(0) & " files in folder in " & elapsed_time_seconds & " seconds.")
-        Debug.WriteLine(results(1) & " new files identified.")
-        Debug.WriteLine(results(2) & " files successfully added.")
-        Debug.WriteLine(results(3) & " files Not added.")
-        Debug.WriteLine(results(4) & " files contain format errors.")
-        Debug.WriteLine(results(5) & " files contain content errors.")
+        Dim process_time_string = ("Process time: " & elapsed_time_hours & ":" & elapsed_time_minutes & ":" & elapsed_time_seconds & " seconds")
+        Debug.WriteLine(process_time_string)
 
     End Sub
 
@@ -219,6 +216,11 @@ Module Module1
 
         End If
 
+
+        Debug.WriteLine(results(1) & " new files identified.")
+        Debug.WriteLine(results(2) & " files added.")
+        Debug.WriteLine(results(3) & " files not added.")
+
         sSql = Nothing
         file_count = Nothing
         folder_count = Nothing
@@ -317,7 +319,7 @@ Module Module1
 
         If demo_mode = True Then
             objExcel.Visible = True
-            System.Threading.Thread.CurrentThread.Sleep(500)
+            Threading.Thread.CurrentThread.Sleep(500)
         End If
 
         Try
@@ -331,7 +333,7 @@ Module Module1
             worksheet = workbook.Worksheets(1)
             If demo_mode Then
                 worksheet.Activate
-                System.Threading.Thread.CurrentThread.Sleep(500)
+                Threading.Thread.CurrentThread.Sleep(500)
             End If
 
             'Collect Identifying info
@@ -340,7 +342,7 @@ Module Module1
 
             If demo_mode Then
                 worksheet.Cells(start_row, start_col).Select
-                System.Threading.Thread.CurrentThread.Sleep(500)
+                Threading.Thread.CurrentThread.Sleep(500)
             End If
             Do Until worksheet.Cells(start_row, start_col).Value = ""
                 If worksheet.Cells(start_row, start_col).Value = "Unit: " _
@@ -348,28 +350,28 @@ Module Module1
                     start_col = start_col + 1
                     If demo_mode Then
                         worksheet.Cells(start_row, start_col).Select
-                        System.Threading.Thread.CurrentThread.Sleep(500)
+                        Threading.Thread.CurrentThread.Sleep(500)
                     End If
                 Else
                     unit = worksheet.Cells(4, start_col).Value
                     If demo_mode Then
                         worksheet.Cells(4, start_col).Select
-                        System.Threading.Thread.CurrentThread.Sleep(250)
+                        Threading.Thread.CurrentThread.Sleep(250)
                     End If
                     contact = worksheet.Cells(6, start_col).Value
                     If demo_mode Then
                         worksheet.Cells(6, start_col).Select
-                        System.Threading.Thread.CurrentThread.Sleep(250)
+                        Threading.Thread.CurrentThread.Sleep(250)
                     End If
                     date_submitted = worksheet.Cells(8, start_col).Value
                     If demo_mode Then
                         worksheet.Cells(8, start_col).Select
-                        System.Threading.Thread.CurrentThread.Sleep(250)
+                        Threading.Thread.CurrentThread.Sleep(250)
                     End If
                     start_col = start_col + 1
                 End If
                 If demo_mode Then
-                    System.Threading.Thread.CurrentThread.Sleep(500)
+                    Threading.Thread.CurrentThread.Sleep(500)
                 End If
             Loop
 
@@ -386,7 +388,7 @@ Module Module1
                 worksheet = objExcel.ActiveWorkbook.Worksheets(2)
                 If demo_mode Then
                     worksheet.Activate
-                    System.Threading.Thread.CurrentThread.Sleep(500)
+                    Threading.Thread.CurrentThread.Sleep(500)
                 End If
                 If Left(worksheet.Name, 2) = "1 " Then                                             'Session 1
                     session_no = 1
@@ -490,7 +492,7 @@ Module Module1
             End If
 
             If demo_mode = True Then
-                System.Threading.Thread.CurrentThread.Sleep(500)
+                Threading.Thread.CurrentThread.Sleep(500)
             End If
 
             Try
@@ -992,7 +994,7 @@ Module Module1
             If demo_mode Then
                 currentWorkSheet.Activate
                 currentWorkSheet.Cells(4, 2).Activate
-                System.Threading.Thread.CurrentThread.Sleep(500)
+                Threading.Thread.CurrentThread.Sleep(500)
             End If
 
             If Left(currentWorkSheet.name, 3) = worksheetName Then
@@ -1000,7 +1002,7 @@ Module Module1
                 If Not IsNothing(r) Then
                     If demo_mode Then
                         currentWorkSheet.Cells(r.row, r.column).Activate
-                        System.Threading.Thread.CurrentThread.Sleep(500)
+                        Threading.Thread.CurrentThread.Sleep(500)
                     End If
                     'Debug.WriteLine("Column: " & r.column)
                     'Debug.WriteLine("Row: " & r.row)
@@ -1010,7 +1012,7 @@ Module Module1
                     startCol = r.column
                     If demo_mode Then
                         currentWorkSheet.Cells(startRow, startCol).Activate
-                        System.Threading.Thread.CurrentThread.Sleep(500)
+                        Threading.Thread.CurrentThread.Sleep(500)
                     End If
                     curRow = startRow
                     curCol = startCol
@@ -1027,13 +1029,13 @@ Module Module1
                             curCol = curCol + 1
                             If demo_mode Then
                                 currentWorkSheet.Cells(curRow, curCol).Activate
-                                System.Threading.Thread.CurrentThread.Sleep(500)
+                                Threading.Thread.CurrentThread.Sleep(500)
                             End If
                         Else
                             first_name = Trim(currentWorkSheet.Cells(curRow, curCol).Value)
                             If demo_mode Then
                                 currentWorkSheet.Cells(curRow, curCol).Activate
-                                System.Threading.Thread.CurrentThread.Sleep(500)
+                                Threading.Thread.CurrentThread.Sleep(500)
                             End If
                             curRow = curRow + 1
                             'Debug.WriteLine(first_name)
@@ -1041,7 +1043,7 @@ Module Module1
                             last_name = Trim(currentWorkSheet.Cells(curRow, curCol).Value)
                             If demo_mode Then
                                 currentWorkSheet.Cells(curRow, curCol).Activate
-                                System.Threading.Thread.CurrentThread.Sleep(500)
+                                Threading.Thread.CurrentThread.Sleep(500)
                             End If
                             curRow = curRow + 1
                             'Debug.WriteLine(last_name)
@@ -1054,7 +1056,7 @@ Module Module1
                             End If
                             If demo_mode Then
                                 currentWorkSheet.Cells(curRow, curCol).Activate
-                                System.Threading.Thread.CurrentThread.Sleep(500)
+                                Threading.Thread.CurrentThread.Sleep(500)
                             End If
                             curRow = curRow + 1
                             'Debug.WriteLine(eid)
@@ -1064,7 +1066,7 @@ Module Module1
                             'Debug.WriteLine(org_team)
                             If demo_mode Then
                                 currentWorkSheet.Cells(curRow, curCol).Activate
-                                System.Threading.Thread.CurrentThread.Sleep(500)
+                                Threading.Thread.CurrentThread.Sleep(500)
                             End If
                             sSql = "SELECT org_team_mapID from org_team_map where org_team = """ & org_team & """"
                             'Debug.WriteLine(sSql)
@@ -1095,10 +1097,17 @@ Module Module1
                             rec.Close()
                             curRow = curRow + 1
 
-                            budget_no = currentWorkSheet.Cells(curRow, curCol).Value
+                            budget_no = Trim(currentWorkSheet.Cells(curRow, curCol).Value)
+                            budget_no = Replace(budget_no, "-", "")
+                            budget_no = Replace(budget_no, "#", "")
+                            budget_no = Replace(budget_no, " and", ",")
+                            budget_no = Replace(budget_no, ";", ",")
+                            budget_no = Replace(budget_no, "/", ",")
+                            budget_no = Replace(budget_no, ",,", ",")
+
                             If demo_mode Then
                                 currentWorkSheet.Cells(curRow, curCol).Activate
-                                System.Threading.Thread.CurrentThread.Sleep(500)
+                                Threading.Thread.CurrentThread.Sleep(500)
                             End If
                             curRow = curRow + 1
 
@@ -1586,7 +1595,7 @@ Module Module1
         workbook.Save()
 
         If demo_mode = True Then
-            System.Threading.Thread.CurrentThread.Sleep(500)
+            Threading.Thread.CurrentThread.Sleep(500)
         End If
 
         Return workbook
@@ -1777,7 +1786,7 @@ Module Module1
         workbook.Save()
 
         If demo_mode = True Then
-            System.Threading.Thread.CurrentThread.Sleep(500)
+            Threading.Thread.CurrentThread.Sleep(500)
         End If
 
         Return workbook
@@ -2000,7 +2009,7 @@ Module Module1
         workbook.Save()
 
         If demo_mode = True Then
-            System.Threading.Thread.CurrentThread.Sleep(500)
+            Threading.Thread.CurrentThread.Sleep(500)
         End If
 
         Return workbook
@@ -2251,6 +2260,231 @@ Module Module1
         worksheet = Nothing
 
     End Function
+
+    Sub ExportMsgFolderToExcel()
+        Dim appOutlook As Outlook.Application
+        Dim strPath As String
+        Dim IntRowCounter As Integer
+        Dim msg As Outlook.MailItem
+        Dim nms As Outlook.NameSpace
+        Dim folder As Outlook.MAPIFolder
+        Dim attachment_count As Integer
+
+        strPath = "C:\submissions\"
+        'strPathAttachments = "\\sharepoint.washington.edu@SSL\DavWWWRoot\oim\proj\HRPayroll\Imp\Supervisory Org Cleanup\Role_Mapping_2\Submittals\"
+
+        'Select export folder
+        appOutlook = CreateObject("Outlook.Application")
+        nms = appOutlook.GetNamespace("MAPI")
+        'folder = nms.PickFolder
+        folder = nms.GetFolderFromID("00000000156327CA9648CE489CF65CF10820403A0100E5BC31A858143943B4DFB26345E4937A0000A35DC2510000")
+
+        'Handle potential errors with Select Folder dialog box.
+        If folder Is Nothing Then
+            MsgBox("There are no mail messages to export", vbOKOnly, "Error")
+            Exit Sub
+        ElseIf folder.DefaultItemType <> Outlook.OlItemType.olMailItem Then
+            MsgBox("There are no mail messages to export", vbOKOnly, "Error")
+            Exit Sub
+        ElseIf folder.Items.Count = 0 Then
+            MsgBox("There are no mail messages to export", vbOKOnly, "Error")
+            Exit Sub
+        End If
+
+        IntRowCounter = 1
+
+        For Each msg In folder.Items
+            'attachment_count = download_attachments(msg)
+            download_attachments(msg)
+            'IntRowCounter = IntRowCounter + attachment_count
+        Next msg
+
+        'Dim result
+        'result = "Processed " & IntRowCounter - 1 & " attachments." & vbNewLine
+
+        Generate_Report()
+
+        appOutlook = Nothing
+        msg = Nothing
+        nms = Nothing
+        folder = Nothing
+
+        Exit Sub
+
+    End Sub
+
+    Sub Generate_Report()
+        Dim appExcel As Excel.Application
+        Dim wkb As Excel.Workbook
+        Dim worksheet As Excel.Worksheet
+        Dim range As Excel.Range
+        Dim strSheet As String
+        Dim strPath As String
+        Dim conn As ADODB.Connection
+        Dim rec As ADODB.Recordset
+        Dim result
+        Dim win As Excel.Window
+        Dim sSql As String
+
+        conn = New ADODB.Connection
+        rec = New ADODB.Recordset
+        strSheet = "Working in Workday Submittal Attachment List.xlsx"
+        strPath = "C:\submissions\"
+        strSheet = strPath & strSheet
+
+        conn.Open("Provider=Microsoft.ACE.OLEDB.12.0;Data Source=C:\Role_Mapping_2\Session_responses_2.accdb")
+
+        'Open and activate Excel workbook.
+        appExcel = CreateObject("Excel.Application")
+        appExcel.Workbooks.Open(strSheet)
+        wkb = appExcel.ActiveWorkbook
+        win = appExcel.ActiveWindow
+        worksheet = wkb.Sheets(1)
+        appExcel.Application.Visible = True
+        worksheet.Activate()
+
+        'Copy field items in mail folder.
+
+        worksheet.Cells(1, 1).Value = "ID"
+        worksheet.Cells(1, 2).Value = "Sender Email"
+        worksheet.Cells(1, 3).Value = "Sender Name"
+        worksheet.Cells(1, 4).Value = "Email Subject"
+        worksheet.Cells(1, 5).Value = "Date Recieved"
+        worksheet.Cells(1, 6).Value = "Attachment File Name"
+        worksheet.Cells(1, 7).Value = "Attachment Truncated File Name"
+
+        sSql = "SELECT * FROM files"
+        rec.Open(sSql, conn)
+        If (rec.BOF And rec.EOF) Then
+            MsgBox("No files in DB.")
+        Else
+            worksheet.Cells(2, 1).CopyFromRecordset(rec)
+        End If
+
+        worksheet.Columns("B:B").ColumnWidth = 25
+        worksheet.Columns("C:C").ColumnWidth = 25
+        worksheet.Columns("D:D").ColumnWidth = 50
+        worksheet.Columns("F:F").ColumnWidth = 50
+        worksheet.Columns("G:G").ColumnWidth = 50
+        worksheet.Rows("1:1").Font.Bold = True
+        worksheet.Range("B2").Select()
+        win.FreezePanes = True
+
+        wkb.Save()
+
+        result = "Results published to " & strSheet & "."
+
+        MsgBox(result)
+
+        appExcel = Nothing
+        wkb = Nothing
+        worksheet = Nothing
+        range = Nothing
+        conn = Nothing
+        rec = Nothing
+
+        Exit Sub
+
+    End Sub
+
+    Sub download_attachments(itm As Outlook.MailItem)
+        Dim intColumnCounter As Integer
+        Dim msg As Outlook.MailItem
+        Dim rec As ADODB.Recordset
+        Dim conn As ADODB.Connection
+        Dim sender_email_address As String
+        Dim Attachment As Outlook.Attachment
+        Dim myattachments As Outlook.Attachments
+        Dim truncated_file_name
+        Dim sSql
+        Dim a
+        Dim b
+        Dim c
+        Dim sender_name
+        Dim subject
+        Dim received_time
+        Dim file_name
+        Dim results As Integer
+        Dim strPathAttachments As String
+
+        strPathAttachments = "C:\submissions\Submittals\"
+        intColumnCounter = 0
+        sender_email_address = ""
+        truncated_file_name = ""
+        a = 0
+        b = 0
+        c = 0
+        results = 0
+        rec = New ADODB.Recordset
+        conn = New ADODB.Connection
+
+        conn.Open("Provider=Microsoft.ACE.OLEDB.12.0;Data Source=C:\Role_Mapping_2\Session_responses_2.accdb")
+
+        msg = itm
+        sender_email_address = Mid$(msg.SenderEmailAddress, InStrRev(msg.SenderEmailAddress, "-") + 1)
+        sender_name = msg.SenderName
+        subject = msg.Subject
+        subject = Replace(subject, """", """""")
+        subject = Replace(subject, "'", "''")
+        received_time = msg.ReceivedTime
+        myattachments = msg.Attachments
+        a = 0
+        If myattachments.Count > 0 Then
+            For Each Attachment In myattachments
+                If Attachment.Type = 1 Then
+                    If InStr(Attachment.FileName, ".xls") Then
+
+                        'Debug.WriteLine(IntRowCounter + a)
+                        file_name = Attachment.FileName
+                        truncated_file_name = Replace(Attachment.FileName, "...", "")
+                        truncated_file_name = Replace(truncated_file_name, "..", ".")
+                        truncated_file_name = Replace(truncated_file_name, "&", "")
+                        truncated_file_name = Replace(truncated_file_name, "'", "''")
+                        truncated_file_name = Replace(truncated_file_name, "#", "")
+                        truncated_file_name = Replace(truncated_file_name, "\", "")
+                        truncated_file_name = Replace(truncated_file_name, "/", "")
+                        truncated_file_name = Replace(truncated_file_name, "?", "")
+                        truncated_file_name = Format(msg.ReceivedTime, "yyyyMMdd-HHmmss") & " " & Right(truncated_file_name, 112)
+
+                        sSql = "SELECT fileID FROM files WHERE truncated_file_name = """ & truncated_file_name & """"
+                        'Debug.WriteLine(IntRowCounter + a)
+                        rec.Open(sSql, conn)
+
+                        If (rec.BOF And rec.EOF) Then
+                            sSql = "INSERT INTO files (sender_email, sender_name, received_time, subject, file_name, truncated_file_name, date_added) VALUES (""" & sender_email_address & """,""" _
+                            & sender_name & """,""" _
+                            & received_time & """,""" _
+                            & subject & """,""" _
+                            & file_name & """,""" _
+                            & truncated_file_name & """,""" _
+                            & Now() & """)"
+                            'Debug.WriteLine(sSql)
+                            conn.Execute(sSql)
+                            Attachment.SaveAsFile(strPathAttachments & truncated_file_name)
+                            'Debug.WriteLine(strPathAttachments & truncated_file_name)
+
+                            b = b + 1
+                        Else
+                            'Debug.WriteLine("File previously saved.")
+                            'Debug.WriteLine(truncated_file_name)
+                            c = c + 1
+                        End If
+                        rec.Close()
+
+                        a = a + 1
+
+                    End If
+                End If
+            Next Attachment
+        End If
+
+    End Sub
+
+    Sub trigger_report_generation(itm As Outlook.MailItem)
+        Generate_Report()
+    End Sub
+
+
 
 
 End Module
