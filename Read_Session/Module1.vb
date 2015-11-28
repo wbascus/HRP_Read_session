@@ -73,14 +73,14 @@ Module Module1
             conn.Open("Provider=Microsoft.ACE.OLEDB.12.0;Data Source=C:\submissions\Session_responses.accdb")
         End If
 
-        'results = process_Folder(objExcel, conn, folder_path, demo_mode, db)
+        results = process_Folder(objExcel, conn, folder_path, demo_mode, db)
 
         'test a single file
         'Process_workbook("20151110-160531 Working in Workday Session 1 - Data Collection Tool College of Arts And Sciences_Linguistics" & ".xlsm", objExcel, conn)    'Session 1 test
         'Process_workbook("20151118- 1009 HFS - Session 3 - Data Collection - Working in Workday" & ".xlsx", objExcel, conn)    'Session 3 test
         'Process_workbook("20151118- 1009 HFS - Session 2 - Data Collection - Working in Workday" & ".xlsx", objExcel, conn)    'Session 2 test
-        Process_workbook("20151123-1354 Applied Mathematics  Working in Workday - Session 3 - Data Collection Tool (Mac Compatible).xlsx",
-                          folder_path, objExcel, conn, demo_mode, db)
+        'Process_workbook("20151123-1354 Applied Mathematics  Working in Workday - Session 3 - Data Collection Tool (Mac Compatible).xlsx", folder_path, objExcel, conn, demo_mode, db)   'Double encountered in Excel Spreadsheet
+        'Process_workbook("20151114-1407 Working in Workday - Session 2 - Orthodontics.xlsm", folder_path, objExcel, conn, demo_mode, db)   'Identifying information in wrong cell
         'generate_error_report(objExcel, conn, "Error_report", "")
 
         'initiate_unit_reports(objExcel, conn, "C:\submissions\Unit Reports\", demo_mode)
@@ -99,7 +99,7 @@ Module Module1
         end_time = Now()
 
         elapsed_time_hours = DateDiff("h", start_time, end_time)
-        elapsed_time_minutes = DateDiff("m", start_time, end_time) Mod 60
+        elapsed_time_minutes = DateDiff("n", start_time, end_time)
         elapsed_time_seconds = DateDiff("s", start_time, end_time) Mod 60
 
         Dim process_time_string = ("Process time: " & elapsed_time_hours & ":" & elapsed_time_minutes & ":" & elapsed_time_seconds & " seconds")
@@ -171,12 +171,12 @@ Module Module1
             folder_count = folder_count + 1
             FileNameWithExt = Mid$(fileName, InStrRev(fileName, "\") + 1)
             'Debug.WriteLine(FileNameWithExt)
-            sSql = "Select submittalID from " & db & " submittals where revised_truncated_file_name = """ & FileNameWithExt & """"
+            sSql = "Select submittalID from " & db & " submittals where truncated_file_name = """ & FileNameWithExt & """"
             'Debug.WriteLine(sSql)
             rec.Open(sSql, conn)
 
             If (rec.BOF And rec.EOF) Then                                                   'if the file name has not been recorded
-                Debug.WriteLine("Processing " & file_count + 1 & ":  " & folderpath & "\" & FileNameWithExt & "...")
+                Debug.WriteLine(folder_count & ": Processing new file " & file_count + 1 & ":  " & folderpath & "\" & FileNameWithExt & "...")
                 workbook_results = Process_workbook(FileNameWithExt, folderpath, objExcel, conn, demo_mode, db)
 
                 If (workbook_results(0) > 0) Then
@@ -193,6 +193,8 @@ Module Module1
                     error_content = error_content + 1
                 End If
                 file_count = file_count + 1
+            Else
+                Debug.WriteLine(folder_count & ": File previously processed.")
             End If
             rec.Close()
 
@@ -307,7 +309,6 @@ Module Module1
         unit_map_ID = 0
         workbook_results = {0, 0, 0, 0, 0}      'successful_reads, add_attempted, not_added, error_format, error_content
         process_scenario_results = {0, 0, 0}
-        demo_mode = True
 
         pathToFile = folder_path & "\" & filename
 
@@ -347,30 +348,66 @@ Module Module1
                 worksheet.Cells(start_row, start_col).Select
                 Threading.Thread.CurrentThread.Sleep(500)
             End If
+
+            If Not IsNothing(worksheet.Cells(4, 2).value) Then
+                unit = unit & worksheet.Cells(4, 2).value.ToString
+            End If
+            If Not IsNothing(worksheet.Cells(4, 3).value) Then
+                unit = unit & worksheet.Cells(4, 3).value.ToString
+            End If
+            If Not IsNothing(worksheet.Cells(5, 2).value) Then
+                unit = unit & worksheet.Cells(5, 2).value.ToString
+            End If
+            unit = Replace(unit, "Unit: ", "")
+            unit = Replace(unit, "Organization for which this was completed", "")
+            unit = Trim(unit)
+            'Debug.WriteLine(unit)
+
+            If Not IsNothing(worksheet.Cells(6, 2).value) Then
+                contact = contact & worksheet.Cells(6, 2).value.ToString
+            End If
+            If Not IsNothing(worksheet.Cells(6, 3).value) Then
+                contact = contact & worksheet.Cells(6, 3).value.ToString
+            End If
+            If Not IsNothing(worksheet.Cells(7, 2).value) Then
+                contact = contact & worksheet.Cells(7, 2).value.ToString
+            End If
+            contact = Replace(contact, "Contact: ", "")
+            contact = Replace(contact, "Person(s) we can contact if we have questions or for validation", "")
+            contact = Trim(contact)
+            'Debug.WriteLine(contact)
+
+            If Not IsNothing(worksheet.Cells(8, 2).value) Then
+                date_submitted = date_submitted & worksheet.Cells(8, 2).value.ToString
+            End If
+            If Not IsNothing(worksheet.Cells(8, 3).value) Then
+                date_submitted = date_submitted & worksheet.Cells(8, 3).value.ToString
+            End If
+            If Not IsNothing(worksheet.Cells(9, 2).value) Then
+                date_submitted = date_submitted & worksheet.Cells(9, 2).value.ToString
+            End If
+            date_submitted = Replace(date_submitted, "Date: ", "")
+            date_submitted = Replace(date_submitted, "When this was completed ", "")
+            date_submitted = Trim(date_submitted)
+            'Debug.WriteLine(date_submitted)
+
             Do Until IsNothing(worksheet.Cells(start_row, start_col).value)
                 If worksheet.Cells(start_row, start_col).Value.ToString = "Unit: " _
                     Or worksheet.Cells(start_row, start_col).Value.ToString = "Organization for which this was completed" Then
                     start_col = start_col + 1
-                    If start_col = 4 Then
-                        start_col = 2
-                        start_row = 5
-                    End If
                     If demo_mode Then
                         worksheet.Cells(start_row, start_col).Select
                         Threading.Thread.CurrentThread.Sleep(500)
                     End If
                 Else
-                    unit = worksheet.Cells(start_row, start_col).Value.ToString
                     If demo_mode Then
                         worksheet.Cells(start_row, start_col).Select
                         Threading.Thread.CurrentThread.Sleep(250)
                     End If
-                    contact = worksheet.Cells(6, start_col).Value.ToString
                     If demo_mode Then
                         worksheet.Cells(6, start_col).Select
                         Threading.Thread.CurrentThread.Sleep(250)
                     End If
-                    date_submitted = worksheet.Cells(8, start_col).Value.ToString
                     If demo_mode Then
                         worksheet.Cells(8, start_col).Select
                         Threading.Thread.CurrentThread.Sleep(250)
@@ -381,13 +418,6 @@ Module Module1
                     Threading.Thread.CurrentThread.Sleep(500)
                 End If
             Loop
-
-            If IsNothing(unit) Then
-                error_content_bool = True
-                error_content_ct = error_content_ct + 1
-            End If
-
-            session_no = 0
 
             worksheetCount = workbook.Worksheets.Count
 
@@ -418,102 +448,101 @@ Module Module1
                 End If
             Else
                 error_format_bool = True
-                error_format_ct = error_format_ct + 1
-            End If
-
-            'Debug.WriteLine(file_ext)
-            'Debug.WriteLine(session_no)
-
-            If error_content_bool = False And error_format_bool = False And session_no <> 0 Then
-                'Debug.WriteLine("Format and content check complete.  processing scenarios")
-
-                'Prepare Unit for verification
-                sSql = "SELECT unit_map_ID from unit_correction_map where reported_unit = """ & unit & """"
-                'Debug.WriteLine(sSql)
-                rec.Open(sSql, conn)
-
-                Dim i = 0
-                If (rec.BOF And rec.EOF) Then
-                    rec.Close()
-                    sSql = "INSERT INTO unit_correction_map (reported_unit) VALUES (""" & unit & """)"
-                    'Debug.WriteLine(sSql)
-                    conn.Execute(sSql)
-
-                    'Identify the new record's ID
-                    sSql = "Select max(unit_map_ID) FROM unit_correction_map"
-                    rec.Open(sSql, conn)
-                    For Each x In rec.Fields
-                        unit_map_ID = x.value
-                    Next
-                    rec.Close()
-                Else
-                    For Each x In rec.Fields
-                        If Not IsDBNull(x.value) Then
-                            unit_map_ID = x.value
-                        End If
-                    Next
-                    rec.Close()
+                    error_format_ct = error_format_ct + 1
                 End If
 
+                'Debug.WriteLine(file_ext)
+                'Debug.WriteLine(session_no)
+
+                If error_content_bool = False And error_format_bool = False And session_no <> 0 Then
+                    'Debug.WriteLine("Format and content check complete.  processing scenarios")
+
+                    'Prepare Unit for verification
+                    sSql = "SELECT unit_map_ID from unit_correction_map where reported_unit = """ & unit & """"
+                    'Debug.WriteLine(sSql)
+                    rec.Open(sSql, conn)
+
+                    Dim i = 0
+                    If (rec.BOF And rec.EOF) Then
+                        rec.Close()
+                        sSql = "INSERT INTO unit_correction_map (reported_unit) VALUES (""" & unit & """)"
+                        'Debug.WriteLine(sSql)
+                        conn.Execute(sSql)
+
+                        'Identify the new record's ID
+                        sSql = "Select max(unit_map_ID) FROM unit_correction_map"
+                        rec.Open(sSql, conn)
+                        For Each x In rec.Fields
+                            unit_map_ID = x.value
+                        Next
+                        rec.Close()
+                    Else
+                        For Each x In rec.Fields
+                            If Not IsDBNull(x.value) Then
+                                unit_map_ID = x.value
+                            End If
+                        Next
+                        rec.Close()
+                    End If
 
                 'Add a record
-                sSql = "INSERT INTO " & db & " submittals (reported_unit, contact, date_submitted, date_recorded, file_name, session_no, unit_map_ID) VALUES (""" &
+                sSql = "INSERT INTO " & db & " submittals (reported_unit, contact, date_submitted, date_recorded, truncated_file_name, session_no, unit_map_ID) VALUES (""" &
                     unit & """, """ & contact & """, """ & date_submitted & """, """ & Format(Now, "MM/dd/yyyy") & """, """ & filename & """,""" & session_no.ToString & """,""" & unit_map_ID & """)"
                 'Debug.WriteLine(sSql)
                 conn.Execute(sSql)
 
-                'Identify the new record's ID
-                sSql = "Select max(submittalID) FROM " & db & " submittals"
-                rec.Open(sSql, conn)
-                For Each x In rec.Fields
-                    submittalID = x.value
-                Next
-                rec.Close()
+                    'Identify the new record's ID
+                    sSql = "Select max(submittalID) FROM " & db & " submittals"
+                    rec.Open(sSql, conn)
+                    For Each x In rec.Fields
+                        submittalID = x.value
+                    Next
+                    rec.Close()
 
-                process_scenario_results = Process_scenarios(objExcel, workbook, conn, submittalID, file_ext, session_no, demo_mode, db)
+                    process_scenario_results = Process_scenarios(objExcel, workbook, conn, submittalID, file_ext, session_no, demo_mode, db)
 
-                workbook_results(0) = process_scenario_results(0)   'Successful_field_reads
-                'workbook_results(3) = process_scenario_results(1)   'blank_field_ct_non-academic
-                'workbook_results(4) = process_scenario_results(2)   'blank_field_ct_academic
-                add_attempted = add_attempted + 1
+                    workbook_results(0) = process_scenario_results(0)   'Successful_field_reads
+                    'workbook_results(3) = process_scenario_results(1)   'blank_field_ct_non-academic
+                    'workbook_results(4) = process_scenario_results(2)   'blank_field_ct_academic
+                    add_attempted = add_attempted + 1
 
-                sSql = "DELETE * FROM " & db & " rejected_submittals WHERE filename = """ & filename & """"
-                'Debug.WriteLine(sSql)
-                conn.Execute(sSql)
-
-            Else
-                Debug.WriteLine("...Format and content check returned errors.  See error log for more information.")
-                not_added = not_added + 1
-
-                sSql = "Select rejected_submittalID from " & db & " rejected_submittals where filename = """ & filename & """"
-                'Debug.WriteLine(sSql)
-                rec.Open(sSql, conn)
-
-                If (rec.BOF And rec.EOF) Then                                                   'if the file name has not been recorded
-                    sSql = "INSERT INTO " & db & " rejected_submittals (filename, content_error, format_error) values (""" & filename & """, " & error_content_bool & ", " & error_format_bool & ")"
-                    Debug.WriteLine(sSql)
+                    sSql = "DELETE * FROM " & db & " rejected_submittals WHERE filename = """ & filename & """"
+                    'Debug.WriteLine(sSql)
                     conn.Execute(sSql)
+
+                Else
+                    Debug.WriteLine("...Format and content check returned errors.  See error log for more information.")
+                    not_added = not_added + 1
+
+                    sSql = "Select rejected_submittalID from " & db & " rejected_submittals where filename = """ & filename & """"
+                    'Debug.WriteLine(sSql)
+                    rec.Open(sSql, conn)
+
+                    If (rec.BOF And rec.EOF) Then                                                   'if the file name has not been recorded
+                        sSql = "INSERT INTO " & db & " rejected_submittals (filename, content_error, format_error) values (""" & filename & """, " & error_content_bool & ", " & error_format_bool & ")"
+                        Debug.WriteLine(sSql)
+                        conn.Execute(sSql)
+                    End If
+                    rec.Close()
+
                 End If
-                rec.Close()
+
+                If demo_mode = True Then
+                    Threading.Thread.CurrentThread.Sleep(500)
+                End If
+
+                Try
+                    workbook.Close()
+                Catch ex As Exception
+                    Debug.WriteLine("Could not close workbook.")
+                End Try
+
+                workbook = Nothing
+                worksheet = Nothing
 
             End If
 
-            If demo_mode = True Then
-                Threading.Thread.CurrentThread.Sleep(500)
-            End If
-
-            Try
-                workbook.Close()
-            Catch ex As Exception
-                Debug.WriteLine("Could not close workbook.")
-            End Try
-
-            workbook = Nothing
-            worksheet = Nothing
-
-        End If
-
-        workbook_results(1) = add_attempted
+            workbook_results(1) = add_attempted
         workbook_results(2) = not_added
         workbook_results(3) = error_format_ct                  'There was an error in format - number of worksheets was not what was expected
         workbook_results(4) = error_content_ct                 'There was an error of content - identifying information missing
@@ -976,7 +1005,7 @@ Module Module1
         results = {"", "", ""}   'index, worksheet_name_error, worksheet_orient_error
         i = 0
         index = 0
-        demo_mode = False
+
 
         rec = New ADODB.Recordset
 
@@ -1027,7 +1056,7 @@ Module Module1
                     'Debug.WriteLine( "Start RC " & startRow &","& startCol
                     'Debug.WriteLine( "Current RC " & curRow &", "& curCol
 
-                    Do Until currentWorkSheet.Cells(curRow, curCol).Value.ToString = ""
+                    Do Until IsNothing(currentWorkSheet.Cells(curRow, curCol).Value)
                         If currentWorkSheet.Cells(curRow, curCol).Value.ToString = "Ex: Elizabeth" _
                             Or currentWorkSheet.Cells(curRow, curCol).Value.ToString = "EXAMPLE: Peter" _
                             Or currentWorkSheet.Cells(curRow, curCol).Value.ToString = "EXAMPLE: Smith" _
@@ -1040,7 +1069,10 @@ Module Module1
                                 Threading.Thread.CurrentThread.Sleep(500)
                             End If
                         Else
-                            first_name = Trim(currentWorkSheet.Cells(curRow, curCol).Value.ToString)
+                            If Not IsNothing(currentWorkSheet.Cells(curRow, curCol).Value) Then
+                                first_name = Trim(currentWorkSheet.Cells(curRow, curCol).Value.ToString)
+                            End If
+
                             If demo_mode Then
                                 currentWorkSheet.Cells(curRow, curCol).Activate
                                 Threading.Thread.CurrentThread.Sleep(500)
@@ -1048,18 +1080,20 @@ Module Module1
                             curRow = curRow + 1
                             'Debug.WriteLine(first_name)
 
-                            last_name = Trim(currentWorkSheet.Cells(curRow, curCol).Value.ToString)
+                            If Not IsNothing(currentWorkSheet.Cells(curRow, curCol).Value) Then
+                                last_name = Trim(currentWorkSheet.Cells(curRow, curCol).Value.ToString)
+                            End If
+
                             If demo_mode Then
                                 currentWorkSheet.Cells(curRow, curCol).Activate
                                 Threading.Thread.CurrentThread.Sleep(500)
                             End If
+
                             curRow = curRow + 1
                             'Debug.WriteLine(last_name)
 
-
-                            eid = Trim(currentWorkSheet.Cells(curRow, curCol).Value.ToString)
-                            If Not IsNothing(eid) Then
-                                eid = eid.ToString()
+                            If Not IsNothing(currentWorkSheet.Cells(curRow, curCol).Value) Then
+                                eid = Trim(currentWorkSheet.Cells(curRow, curCol).Value.ToString)
                                 eid = eid.Replace("-", "")
                             End If
                             If demo_mode Then
@@ -1070,90 +1104,96 @@ Module Module1
                             'Debug.WriteLine(eid)
 
                             'Org Team
-                            org_team = Trim(currentWorkSheet.Cells(curRow, curCol).Value.ToString)
-                            'Debug.WriteLine(org_team)
-                            If demo_mode Then
-                                currentWorkSheet.Cells(curRow, curCol).Activate
-                                Threading.Thread.CurrentThread.Sleep(500)
-                            End If
-                            sSql = "SELECT org_team_mapID from org_team_map where org_team = """ & org_team & """"
-                            'Debug.WriteLine(sSql)
-                            rec.Open(sSql, conn)
+                            If Not IsNothing(currentWorkSheet.Cells(curRow, curCol).Value) Then
+                                    org_team = Trim(currentWorkSheet.Cells(curRow, curCol).Value.ToString)
+                                    'Debug.WriteLine(org_team)
+                                End If
 
-                            If (rec.BOF And rec.EOF) Then
-                                sSql = "INSERT INTO org_team_map (org_team) VALUES (""" & org_team & """)"
+                                If demo_mode Then
+                                    currentWorkSheet.Cells(curRow, curCol).Activate
+                                    Threading.Thread.CurrentThread.Sleep(500)
+                                End If
+
+                                sSql = "SELECT org_team_mapID from org_team_map where org_team = """ & org_team & """"
+                                'Debug.WriteLine(sSql)
+                                rec.Open(sSql, conn)
+
+                                If (rec.BOF And rec.EOF) Then
+                                    sSql = "INSERT INTO org_team_map (org_team) VALUES (""" & org_team & """)"
+                                    'Debug.WriteLine(sSql)
+                                    conn.Execute(sSql)
+                                End If
+
+                                rec.Close()
+
+                                sSql = "SELECT org_team_mapID from org_team_map where org_team = """ & org_team & """"
+                                'Debug.WriteLine(sSql)
+                                rec.Open(sSql, conn)
+
+                                If (rec.BOF And rec.EOF) Then
+                                    org_team_mapID = 0
+                                Else
+                                    For Each x In rec.Fields
+                                        If Not IsDBNull(x.value) Then
+                                            org_team_mapID = x.value
+                                        End If
+                                    Next
+                                End If
+
+                                rec.Close()
+                                curRow = curRow + 1
+
+                                If Not IsNothing(currentWorkSheet.Cells(curRow, curCol).Value) Then
+                                    budget_no = Trim(currentWorkSheet.Cells(curRow, curCol).Value.ToString)
+                                    budget_no = Replace(budget_no, "-", "")
+                                    budget_no = Replace(budget_no, "#", "")
+                                    budget_no = Replace(budget_no, " and", ",")
+                                    budget_no = Replace(budget_no, ";", ",")
+                                    budget_no = Replace(budget_no, "/", ",")
+                                    budget_no = Replace(budget_no, ",,", ",")
+                                End If
+
+                                If demo_mode Then
+                                    currentWorkSheet.Cells(curRow, curCol).Activate
+                                    Threading.Thread.CurrentThread.Sleep(500)
+                                End If
+                                curRow = curRow + 1
+
+                                sSql = "SELECT max(responseID) from responses where org_team = """ & org_team & """ AND EID = """ & eid & """" & " AND submittalID = " & submittalID
+                                'Debug.WriteLine(sSql)
+                                rec.Open(sSql, conn)
+
+                                i = 0
+                                responseID = 0
+                                If (rec.BOF And rec.EOF) Then
+                                    'Debug.WriteLine("The line Is empty")
+                                Else
+                                    For Each x In rec.Fields
+                                        If Not IsDBNull(x.value) Then
+
+                                            responseID = x.value
+                                        End If
+                                    Next
+                                End If
+
+                                rec.Close()
+
+                                'Debug.WriteLine(responseID)
+
+                                If responseID > 0 Then
+                                    sSql = "UPDATE responses Set " & scenario & "_" & field & " = 'x' WHERE responseID = " & responseID
+                                Else
+                                    sSql = "INSERT INTO responses (first_name, last_name, EID, org_team_mapID, org_team, budget_no, " & scenario & "_" & field & ", date_recorded, submittalID) values (""" &
+                                    first_name & """, """ & last_name & """, """ & eid & """, " & org_team_mapID & ", """ & org_team & """, """ & budget_no & """, ""x"",""" & Format(Now, "MM/dd/yyyy") & """, " & submittalID & ")"
+                                End If
                                 'Debug.WriteLine(sSql)
                                 conn.Execute(sSql)
+                                curRow = startRow
+                                curCol = curCol + 1
+                                index = index + 1
+                                'Debug.WriteLine( "RC: " & curRow &","& curCol
+
                             End If
-
-                            rec.Close()
-
-                            sSql = "SELECT org_team_mapID from org_team_map where org_team = """ & org_team & """"
-                            'Debug.WriteLine(sSql)
-                            rec.Open(sSql, conn)
-
-                            If (rec.BOF And rec.EOF) Then
-                                org_team_mapID = 0
-                            Else
-                                For Each x In rec.Fields
-                                    If Not IsDBNull(x.value) Then
-                                        org_team_mapID = x.value
-                                    End If
-                                Next
-                            End If
-
-                            rec.Close()
-                            curRow = curRow + 1
-
-                            budget_no = Trim(currentWorkSheet.Cells(curRow, curCol).Value.ToString)
-                            budget_no = Replace(budget_no, "-", "")
-                            budget_no = Replace(budget_no, "#", "")
-                            budget_no = Replace(budget_no, " and", ",")
-                            budget_no = Replace(budget_no, ";", ",")
-                            budget_no = Replace(budget_no, "/", ",")
-                            budget_no = Replace(budget_no, ",,", ",")
-
-                            If demo_mode Then
-                                currentWorkSheet.Cells(curRow, curCol).Activate
-                                Threading.Thread.CurrentThread.Sleep(500)
-                            End If
-                            curRow = curRow + 1
-
-                            sSql = "SELECT max(responseID) from responses where org_team = """ & org_team & """ AND EID = """ & eid & """" & " AND submittalID = " & submittalID
-                            'Debug.WriteLine(sSql)
-                            rec.Open(sSql, conn)
-
-                            i = 0
-                            responseID = 0
-                            If (rec.BOF And rec.EOF) Then
-                                'Debug.WriteLine("The line Is empty")
-                            Else
-                                For Each x In rec.Fields
-                                    If Not IsDBNull(x.value) Then
-
-                                        responseID = x.value
-                                    End If
-                                Next
-                            End If
-
-                            rec.Close()
-
-                            'Debug.WriteLine(responseID)
-
-                            If responseID > 0 Then
-                                sSql = "UPDATE responses Set " & scenario & "_" & field & " = 'x' WHERE responseID = " & responseID
-                            Else
-                                sSql = "INSERT INTO responses (first_name, last_name, EID, org_team_mapID, org_team, budget_no, " & scenario & "_" & field & ", date_recorded, submittalID) values (""" &
-                                        first_name & """, """ & last_name & """, """ & eid & """, " & org_team_mapID & ", """ & org_team & """, """ & budget_no & """, ""x"",""" & Format(Now, "MM/dd/yyyy") & """, " & submittalID & ")"
-                            End If
-                            'Debug.WriteLine(sSql)
-                            conn.Execute(sSql)
-                            curRow = startRow
-                            curCol = curCol + 1
-                            index = index + 1
-                            'Debug.WriteLine( "RC: " & curRow &","& curCol
-
-                        End If
                     Loop
                 Else
                     'Debug.WriteLine("Orient Cell  " & orient_cell & " not encountered.")
