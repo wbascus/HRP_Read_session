@@ -69,7 +69,7 @@ Module Module1
                 'conn.Execute(sSql)
             End If
         Else
-            path = "\\sharepoint.washington.edu@SSL\DavWWWRoot\oim\proj\HRPayroll\Imp\Supervisory Org Cleanup\Role-Mapping"
+            path = "\\sharepoint.washington.edu@SSL\DavWWWRoot\oim\proj\HRPayroll\Imp\Supervisory Org Cleanup\Role-Mapping\"
             conn.Open("Provider=Microsoft.ACE.OLEDB.12.0;Data Source=C:\submissions\Session_responses.accdb")
         End If
 
@@ -86,10 +86,11 @@ Module Module1
 
         'initiate_unit_reports(objExcel, conn, "[Change Manager]", "C:\submissions\Unit Reports\", demo_mode)   'Generate change manager reports
 
-        initiate_unit_reports(objExcel, conn, "unit", "C:\submissions\Unit Reports\", demo_mode)   'Generate change manager detail_reports
+        'initiate_unit_reports(objExcel, conn, "unit", "C:\submissions\Unit Reports\", demo_mode)   'Generate change manager detail_reports
 
         'generate_unit_report(objExcel, conn, "Housing and Food Services (Housing and Food Services)", "C:\submissions\Unit Reports\", demo_mode)  'file name, '
-        'generate_unit_report(objExcel, conn, "Applied Physics Lab (Applied Physics Lab)", "unit", "C:\submissions\Unit Reports\", demo_mode)  'file name, 
+        generate_unit_report(objExcel, conn, "University of Wash Press (Graduate School)", "unit", "C:\submissions\Unit Reports\", demo_mode)  'file name, 
+        generate_unit_report(objExcel, conn, "Graduate School (Graduate School)", "unit", "C:\submissions\Unit Reports\", demo_mode)  'file name, 
 
         'ExportMsgFolderToExcel()
 
@@ -135,6 +136,8 @@ Module Module1
         Dim debug_state = False
         Dim results As Integer()
         Dim workbook_results As Integer()
+        Dim submittalID As Integer
+        Dim session_no As Integer
 
         sSql = ""
         file_count = 0
@@ -154,6 +157,9 @@ Module Module1
         results = {0, 0, 0, 0, 0, 0}         'Total number of files in folder, Files not already input, files sucessful added, files not added, Files containing format errors, Files containing content errors
         workbook_results = {0, 0, 0, 0, 0}      'successful_reads, add_attempted, not_added, error_format, error_content
         submittal_path = path & "submittals\"
+        submittalID = 0
+        session_no = 0
+
 
         Try
             filenames = My.Computer.FileSystem.GetFiles(submittal_path, FileIO.SearchOption.SearchTopLevelOnly)
@@ -172,30 +178,49 @@ Module Module1
             folder_count = folder_count + 1
             FileNameWithExt = Mid$(fileName, InStrRev(fileName, "\") + 1)
             'Debug.WriteLine(FileNameWithExt)
-            sSql = "Select submittalID from " & db & " submittals where truncated_file_name = """ & FileNameWithExt & """"
+            sSql = "Select submittalID, session_no from " & db & " submittals where truncated_file_name = """ & FileNameWithExt & """"
             'Debug.WriteLine(sSql)
             rec.Open(sSql, conn)
 
             If (rec.BOF And rec.EOF) Then                                                   'if the file name has not been recorded
-                Debug.WriteLine(folder_count & ": Processing new file " & file_count + 1 & ":  " & submittal_path & "\" & FileNameWithExt & "...")
-                workbook_results = Process_workbook(FileNameWithExt, path, objExcel, conn, demo_mode, db)
-
-                If (workbook_results(0) > 0) Then
-                    successful_adds = successful_adds + 1
-                End If
-                If (workbook_results(2) = 1) Then
-                    not_added = not_added + 1
-                End If
-
-                If (workbook_results(3) = 1) Then
-                    error_format = error_format + 1
-                End If
-                If (workbook_results(4) = 1) Then
-                    error_content = error_content + 1
-                End If
-                file_count = file_count + 1
+                'file doesn't exist in the db
             Else
-                Debug.WriteLine(folder_count & ": File previously processed.")
+                Do While Not rec.EOF
+                    Dim i = 0
+                    For Each fld In rec.Fields
+                        If i = 0 Then
+                            submittalID = fld.value
+                        Else
+                            If IsDBNull(fld.value) Then
+                            Else
+                                session_no = fld.value
+                            End If
+                        End If
+                        i = i + 1
+                    Next fld
+                    rec.MoveNext()
+                Loop
+                If session_no = 0 Then
+                    Debug.WriteLine(folder_count & ": Processing new file " & file_count + 1 & ":  " & submittal_path & "\" & FileNameWithExt & "...")
+                    'workbook_results = Process_workbook(FileNameWithExt, path, objExcel, conn, demo_mode, db)
+
+                    If (workbook_results(0) > 0) Then
+                        successful_adds = successful_adds + 1
+                    End If
+                    If (workbook_results(2) = 1) Then
+                        not_added = not_added + 1
+                    End If
+
+                    If (workbook_results(3) = 1) Then
+                        error_format = error_format + 1
+                    End If
+                    If (workbook_results(4) = 1) Then
+                        error_content = error_content + 1
+                    End If
+                    file_count = file_count + 1
+                Else
+                    Debug.WriteLine(folder_count & ": File previously processed.")
+                End If
             End If
             rec.Close()
 
@@ -1388,7 +1413,10 @@ Module Module1
                 End If
                 'Debug.WriteLine("Record Count: " & record_count & "; Unit: " & Unit)
                 'file_name = "Working_in_Workday_" & Unit
-                generate_unit_report(objExcel, conn, where_clause, where_field, folder_path & unit_cm & "\", demo_mode)
+                If (unit_cm = "Wiggers" Or unit_cm = "Copp" Or unit_cm = "Toledo" Or unit_cm = "Greenwood" Or unit_cm = "Mow") Then
+                    generate_unit_report(objExcel, conn, where_clause, where_field, folder_path & unit_cm & "\", demo_mode)
+                End If
+
                 end_time = Now()
                 Dim elapsed_time = DateDiff("s", start_time, end_time)
                 Debug.WriteLine("Processed " & j & ": " & where_clause & " in " & elapsed_time & " seconds")
@@ -1415,7 +1443,7 @@ Module Module1
         Dim unit As String
         Dim record_count As Integer
         Dim file_name As String
-        Dim debug_mode As Boolean
+        Dim debug_state As Boolean
         Dim unitID As Integer
         Dim unit_cm As String
 
@@ -1431,8 +1459,8 @@ Module Module1
         j = 0
         unit = ""
         record_count = 0
-        file_name = "Working In Workday"
-        debug_mode = False
+        file_name = "WiW Security Group Mapping"
+        debug_state = False
         demo_mode = False
         unitID = 0
         unit_cm = ""
@@ -1499,29 +1527,35 @@ Module Module1
         file_path = Replace(file_path, "&", "")
         Debug.WriteLine(file_path)
 
-        If debug_mode = True Then
+        If debug_state = True Then
             objExcel.Visible = True
         End If
         objExcel.DisplayAlerts = 0 ' Don't display any messages about conversion and so forth
         workbook = objExcel.Workbooks.Add
+        workbook.Sheets.Add
         'workbook.Sheets.Add
         'workbook.Sheets.Add
 
-        'workbook.Sheets.Add
+        worksheet = workbook.Worksheets("Sheet2")
+        worksheet.Name = "Groups"
         worksheet = workbook.Worksheets("Sheet1")
-        worksheet.Name = "Roles"
-        'worksheet = workbook.Worksheets("Sheet3")
-        'worksheet.Name = "Field By Role"
+        worksheet.Name = "Field By Group"
         'worksheet = workbook.Worksheets("Sheet2")
         'worksheet.Name = "Field By Scenario"
         'worksheet = workbook.Worksheets("Sheet1")
-        'worksheet.Name = "Role Confirmation Tool"
-        workbook.SaveAs(FileName:=file_path)
+        'worksheet.Name = "Group Confirmation Tool"
+        Try
+            workbook.SaveAs(FileName:=file_path)
+        Catch ex As Exception
+            Debug.WriteLine("File was open.")
+            objExcel.Quit()
+        End Try
 
-        generate_by_role_report(objExcel, conn, where_clause, where_field, file_path, "Roles", record_count, demo_mode, workbook)
-        'generate_field_report(objExcel, conn, where_clause, file_path, "Field by Role", record_count, demo_mode, workbook)
+
+        generate_by_role_report(objExcel, conn, where_clause, where_field, file_path, "Groups", record_count, demo_mode, workbook)
+        generate_field_report(objExcel, conn, where_clause, where_field, file_path, "Field by Group", record_count, demo_mode, workbook)
         'workbook = generate_field_report(objExcel, conn, where_clause, file_path, "Field by Scenario", record_count, demo_mode, workbook)
-        'workbook = generate_role_confirmation_tool(objExcel, conn, where_clause, file_path, "Role Confirmation Tool", record_count, demo_mode, workbook)
+        'workbook = generate_role_confirmation_tool(objExcel, conn, where_clause, file_path, "Group Confirmation Tool", record_count, demo_mode, workbook)
 
         If demo_mode = False Then
             workbook.Close()
@@ -1547,9 +1581,9 @@ Module Module1
         Dim title As String
         Dim i As Integer
         Dim j As Integer
-        Dim debug_mode As Boolean
-        Dim role_count As Integer
-        Dim column_buffer As Integer
+        Dim debug_state As Boolean
+        Dim data_column_ct As Integer
+        Dim column_offset As Integer
         Dim header_rows As Integer
         Dim role_description As String
         Dim role_array As String()
@@ -1567,9 +1601,9 @@ Module Module1
         title = ""
         i = 0
         j = 0
-        debug_mode = True
-        role_count = 0
-        column_buffer = 8
+        debug_state = False
+        data_column_ct = 0
+        column_offset = 7
         header_rows = 2
         role_description = ""
         foo = ""
@@ -1582,16 +1616,15 @@ Module Module1
             condition = " WHERE " & where_field & " = """ & where_clause & """"
         End If
 
-        'sSql = "SELECT * FROM New_Workday_Role_Mapping_by_role" & condition & " ORDER BY  `dw_name_last` asc"
         sSql = "SELECT * FROM New_Workday_Role_Mapping_by_role" & condition
 
         rec.Open(sSql, conn)
-        workbook = generate_worksheet(objExcel, rec, file_path, worksheet_name, workbook)
+        generate_worksheet(objExcel, rec, file_path, worksheet_name, workbook)
         rec.Close()
 
         worksheet = workbook.Worksheets(worksheet_name)
 
-        If debug_mode = True Then
+        If debug_state = True Then
             objExcel.Visible = True
             worksheet.Activate
         End If
@@ -1636,114 +1669,143 @@ Module Module1
                 Next fld
                 i = 0
                 j = j + 1
-                worksheet.cells(1, j + column_buffer).Value = code
-                worksheet.cells(2, j + column_buffer).Value = title
+                worksheet.cells(1, j + column_offset).Value = code
+                worksheet.cells(2, j + column_offset).Value = title
                 If footer = True Then
-                    worksheet.cells(header_rows + record_count + 1, j + column_buffer).Value = formatted_role_description
+                    worksheet.cells(header_rows + record_count + 1, j + column_offset).Value = formatted_role_description
                 End If
                 rec.MoveNext()
             Loop
         End If
         rec.Close()
-        role_count = j
+        data_column_ct = j
 
-        Dim max_column = column_buffer + role_count
+        'Range Definitions
+        Dim max_column = column_offset + data_column_ct
         Dim max_row = header_rows + record_count
-
         Dim max_row_address = worksheet.Rows(max_row).Address
-
-        Dim footer_row = max_row + 1
-
         Dim max_column_txt = worksheet.Cells(1, max_column).Address
         Dim max_cell_txt = worksheet.Cells(max_row, max_column).Address
+        Dim max_header_txt = worksheet.Cells(header_rows, max_column).Address
+        Dim data_header_start = worksheet.Cells(1, column_offset).Address
+        Dim data_columns = column_offset + 1 & ":" & data_column_ct
+        Dim Dataset = worksheet.Range("A" & header_rows + 1 & ": " & max_cell_txt)
+        Dim entire_sheet = worksheet.Range("A1:" & max_cell_txt)
+        Dim footer_row = max_row + 1
+        Dim Data_columns_address = worksheet.Range(worksheet.Columns(column_offset + 1), worksheet.Columns(max_column)).Address
 
-        index = column_buffer
+        'Column Offset Modifications
+        'UnitID
+        With worksheet.Columns("A:A")
+            .ColumnWidth = 3
+        End With
+        'Unit
+        With worksheet.Columns("B:B")
+            .ColumnWidth = 38
+            .EntireColumn.Hidden = True
+        End With
+        'Change Manager
+        With worksheet.Columns("C:C")
+            .ColumnWidth = 8
+            .EntireColumn.Hidden = True
+        End With
+        'Budget Number
+        With worksheet.Columns("D:D")
+            .ColumnWidth = 15
+            .WrapText = True
+        End With
+        'EID
+        With worksheet.Columns("E:E")
+            .ColumnWidth = 10
+        End With
+        'Employee Name
+        With worksheet.Columns("F:F")
+            .ColumnWidth = 25
+            .WrapText = True
+        End With
+        'Supervisory Org
+        With worksheet.Columns("G:G")
+            .ColumnWidth = 40
+            .WrapText = True
+        End With
+        'Data Columns
+        If footer = True Then
+            With worksheet.Columns(Data_columns_address)
+                .ColumnWidth = 40
+                .HorizontalAlignment = Excel.XlHAlign.xlHAlignCenter
+            End With
+            With worksheet.Rows(footer_row)
+                .Font.Size = 8
+                .Font.ColorIndex = 16
+                .WrapText = True
+                .HorizontalAlignment = Excel.XlHAlign.xlHAlignLeft
+                .VerticalAlignment = Excel.XlVAlign.xlVAlignTop
+            End With
+        Else
+            With worksheet.Columns(Data_columns_address)
+                .ColumnWidth = 4
+                .HorizontalAlignment = Excel.XlHAlign.xlHAlignCenter
+            End With
+        End If
 
+        'Dataset Color Coding
+        index = column_offset
         Do
             If worksheet.Cells(1, index).Value = "I9" Then
                 worksheet.Columns(index).Interior.Color = RGB(253, 228, 207)
-                worksheet.Range(worksheet.Cells(1, index), worksheet.Cells(2, index)).Interior.Color = RGB(247, 150, 70)
+                worksheet.Range(worksheet.Cells(1, index), worksheet.Cells(header_rows, index)).Interior.Color = RGB(247, 150, 70)
             ElseIf worksheet.Cells(1, index).Value = "ABP" Then
                 worksheet.Columns(index).Interior.Color = RGB(218, 231, 246)
-                worksheet.Range(worksheet.Cells(1, index), worksheet.Cells(2, index)).Interior.Color = RGB(83, 141, 213)
+                worksheet.Range(worksheet.Cells(1, index), worksheet.Cells(header_rows, index)).Interior.Color = RGB(83, 141, 213)
             ElseIf worksheet.Cells(1, index).Value = "ACP" Then
                 worksheet.Columns(index).Interior.Color = RGB(246, 230, 230)
-                worksheet.Range(worksheet.Cells(1, index), worksheet.Cells(2, index)).Interior.Color = RGB(218, 150, 148)
+                worksheet.Range(worksheet.Cells(1, index), worksheet.Cells(header_rows, index)).Interior.Color = RGB(218, 150, 148)
             ElseIf worksheet.Cells(1, index).Value = "CP" Then
                 worksheet.Columns(index).Interior.Color = RGB(238, 234, 242)
-                worksheet.Range(worksheet.Cells(1, index), worksheet.Cells(2, index)).Interior.Color = RGB(128, 100, 162)
+                worksheet.Range(worksheet.Cells(1, index), worksheet.Cells(header_rows, index)).Interior.Color = RGB(128, 100, 162)
             ElseIf worksheet.Cells(1, index).Value = "CAC" Then
                 worksheet.Columns(index).Interior.Color = RGB(228, 223, 236)
-                worksheet.Range(worksheet.Cells(1, index), worksheet.Cells(2, index)).Interior.Color = RGB(228, 223, 236)
+                worksheet.Range(worksheet.Cells(1, index), worksheet.Cells(header_rows, index)).Interior.Color = RGB(228, 223, 236)
             ElseIf worksheet.Cells(1, index).Value = "HRC" Then
                 worksheet.Columns(index).Interior.Color = RGB(228, 228, 228)
-                worksheet.Range(worksheet.Cells(1, index), worksheet.Cells(2, index)).Interior.Color = RGB(178, 178, 178)
+                worksheet.Range(worksheet.Cells(1, index), worksheet.Cells(header_rows, index)).Interior.Color = RGB(178, 178, 178)
             ElseIf worksheet.Cells(1, index).Value = "HRP" Then
                 worksheet.Columns(index).Interior.Color = RGB(205, 233, 239)
-                worksheet.Range(worksheet.Cells(1, index), worksheet.Cells(2, index)).Interior.Color = RGB(49, 134, 155)
+                worksheet.Range(worksheet.Cells(1, index), worksheet.Cells(header_rows, index)).Interior.Color = RGB(49, 134, 155)
             ElseIf worksheet.Cells(1, index).Value = "TC" Then
                 worksheet.Columns(index).Interior.Color = RGB(241, 245, 231)
-                worksheet.Range(worksheet.Cells(1, index), worksheet.Cells(2, index)).Interior.Color = RGB(196, 215, 155)
+                worksheet.Range(worksheet.Cells(1, index), worksheet.Cells(header_rows, index)).Interior.Color = RGB(196, 215, 155)
             End If
             index = index + 1
         Loop Until index > max_column
 
-        worksheet.Range("A1:U2").Font.Bold = True
+        'Header Modifications
+        worksheet.Range("A1: " & max_header_txt).Font.Bold = True
+        worksheet.Range("A2:" & max_header_txt).Borders(Excel.XlBordersIndex.xlEdgeBottom).LineStyle = Excel.XlLineStyle.xlContinuous
+        worksheet.Range("H2:" & max_header_txt).Orientation = 90
 
-        worksheet.Range("A2:U2").Borders(Excel.XlBordersIndex.xlEdgeBottom).LineStyle = Excel.XlLineStyle.xlContinuous
-
-        worksheet.Range("A3:" & max_cell_txt).Borders(Excel.XlBordersIndex.xlInsideHorizontal).LineStyle = Excel.XlLineStyle.xlDot
-        worksheet.Range("A3:" & max_cell_txt).Borders(Excel.XlBordersIndex.xlInsideHorizontal).ThemeColor = 1
-        worksheet.Range("A3:" & max_cell_txt).Borders(Excel.XlBordersIndex.xlInsideHorizontal).TintAndShade = -0.14996795556505
-
+        'All Cells
         With worksheet.Range("A1:" & max_cell_txt).Font
             .Size = 10
         End With
 
+        'All Data Rows
+        worksheet.Range("A" & header_rows + 1 & ": " & max_cell_txt).Borders(Excel.XlBordersIndex.xlInsideHorizontal).LineStyle = Excel.XlLineStyle.xlDot
+        worksheet.Range("A" & header_rows + 1 & ": " & max_cell_txt).Borders(Excel.XlBordersIndex.xlInsideHorizontal).ThemeColor = 1
+        worksheet.Range("A" & header_rows + 1 & ": " & max_cell_txt).Borders(Excel.XlBordersIndex.xlInsideHorizontal).TintAndShade = -0.14996795556505
+        worksheet.Rows("3:" & max_row).Autofit
 
-
-        worksheet.Columns("I:U").HorizontalAlignment = Excel.XlHAlign.xlHAlignCenter
-
-        worksheet.Range("I2:U2").Orientation = 90
-
-        worksheet.Columns("B:H").WrapText = True
-
+        'AutoFilter
         worksheet.Range("A2:" & max_cell_txt).Autofilter
 
-
-
-        worksheet.Columns("A:A").ColumnWidth = 3 'UnitID
-        worksheet.Columns("B:B").ColumnWidth = 38 'Unit
-        worksheet.Columns("C:C").ColumnWidth = 12 'Change Manager
-        worksheet.Columns("D:D").ColumnWidth = 25 'Budget No
-        worksheet.Columns("E:E").ColumnWidth = 10 'Employee First
-        worksheet.Columns("F:F").ColumnWidth = 12 'Employee Last
-        worksheet.Columns("G:G").ColumnWidth = 10 'EID
-        worksheet.Columns("H:H").ColumnWidth = 48 'Supervisory Org
-        If footer = True Then
-            worksheet.Columns("I:U").ColumnWidth = 40
-            worksheet.Rows(footer_row).Font.Size = 8
-            worksheet.Rows(footer_row).Font.ColorIndex = 16
-            worksheet.Rows(footer_row).WrapText = True
-            worksheet.Rows(footer_row).HorizontalAlignment = Excel.XlHAlign.xlHAlignLeft
-            worksheet.Rows(footer_row).VerticalAlignment = Excel.XlVAlign.xlVAlignTop
-        Else
-            worksheet.Columns("I:U").ColumnWidth = 4
-        End If
-
-        If where_field = "unit" Then
-            worksheet.columns("B:C").EntireColumn.Hidden = True
-        End If
-
+        'Page Setup
         worksheet.PageSetup.PrintArea = "$A$1:" & max_cell_txt
         worksheet.PageSetup.Orientation = Excel.XlPageOrientation.xlLandscape
         worksheet.PageSetup.PaperSize = Excel.XlPaperSize.xlPaper11x17
         worksheet.PageSetup.PrintTitleRows = "$1:$2"
-        worksheet.PageSetup.PrintTitleColumns = "$A:$H"
+        worksheet.PageSetup.PrintTitleColumns = "$A:$G"
         worksheet.PageSetup.CenterHeader = where_clause & Chr(10) & worksheet_name
         worksheet.PageSetup.RightHeader = "&D"
-
-        worksheet.Rows("3:" & max_row).Autofit
 
         workbook.Save()
 
@@ -1758,7 +1820,7 @@ Module Module1
 
     End Function
 
-    Function generate_field_report(objExcel, conn, where_clause, file_path, worksheet_name, record_count, demo_mode, workbook)
+    Function generate_field_report(objExcel, conn, where_clause, where_field, file_path, worksheet_name, record_count, demo_mode, workbook)
         Dim sSql As String
         Dim rec As ADODB.Recordset
         Dim index As Integer
@@ -1770,10 +1832,10 @@ Module Module1
         Dim field_description As String
         Dim data_column_ct As Integer
         Dim column_offset As Integer
-        Dim row_offset As Integer
+        Dim header_rows As Integer
         Dim dataSql As String
         Dim headerSql As String
-        Dim debug_mode As Boolean
+        Dim debug_state As Boolean
 
         sSql = ""
         rec = New ADODB.Recordset
@@ -1781,12 +1843,30 @@ Module Module1
         condition = ""
         role_code = ""
         field_description = ""
-        row_offset = 3
-        column_offset = 8 ' the number of fields before data
+        header_rows = 3
+        column_offset = 7 ' the number of fields before data
         data_column_ct = 0
         dataSql = ""
         headerSql = ""
-        debug_mode = False
+        debug_state = False
+
+        If debug_state = True Then
+            objExcel.Visible = True
+        End If
+
+        If demo_mode = True Then
+            objExcel.Visible = True
+        End If
+
+        worksheet = workbook.Worksheets(worksheet_name)
+
+        If debug_state = True Then
+            worksheet.Activate
+        End If
+
+        If demo_mode = True Then
+            worksheet.Activate
+        End If
 
         If where_clause = "" Then
             condition = ""
@@ -1794,7 +1874,7 @@ Module Module1
             condition = " WHERE unit = """ & where_clause & """"
         End If
 
-        If worksheet_name = "Field By Role" Then
+        If InStr(worksheet_name, "Group") Then
             dataSql = "SELECT * FROM New_Workday_Role_Mapping_by_field_in_order_of_role" & condition
             headerSql = "SELECT role_code, field_description  FROM fields WHERE order_field_by_role_asc is not null ORDER BY  `order_field_by_role_asc` asc"
         Else
@@ -1805,31 +1885,8 @@ Module Module1
         rec = New ADODB.Recordset
         'Debug.WriteLine(dataSql)
         rec.Open(dataSql, conn)
-        workbook = generate_worksheet(objExcel, rec, file_path, worksheet_name, workbook)
+        generate_worksheet(objExcel, rec, file_path, worksheet_name, workbook)
         rec.Close()
-
-        worksheet = workbook.Worksheets(worksheet_name)
-
-        If debug_mode = True Then
-            objExcel.Visible = True
-            worksheet.Activate
-        End If
-
-        If demo_mode = True Then
-            objExcel.Visible = True
-            worksheet.Activate
-        End If
-
-        worksheet.Columns("A:A").ColumnWidth = 3 'UnitID
-        worksheet.Columns("B:B").ColumnWidth = 38 'Unit
-        worksheet.Columns("C:C").ColumnWidth = 8 'Change Manager
-        worksheet.Columns("D:D").ColumnWidth = 25 'Budget No
-        worksheet.Columns("E:E").ColumnWidth = 15 'Employee First
-        worksheet.Columns("F:F").ColumnWidth = 15 ' Employee Last
-        worksheet.Columns("G:G").ColumnWidth = 10 ' EID
-        worksheet.Columns("H:H").ColumnWidth = 48 ' Supervisory Org
-        worksheet.Columns("I:AY").ColumnWidth = 3
-
 
         worksheet.Rows("1").Insert
         worksheet.Rows("1").Insert
@@ -1859,79 +1916,114 @@ Module Module1
         rec.Close()
         data_column_ct = j
 
-        Dim total_rows = record_count + row_offset
-        Dim total_columns = column_offset + data_column_ct
+        'Range Definitions
+        Dim max_column = column_offset + data_column_ct
+        Dim max_row = record_count + header_rows
+        Dim max_row_address = worksheet.Rows(max_row).Address
         Dim max_column_txt = worksheet.Cells(1, column_offset + data_column_ct).Address
-        Dim max_cell_txt = worksheet.Cells(total_rows, total_columns).Address
+        Dim max_cell_txt = worksheet.Cells(max_row, max_column).Address
+        Dim max_header_txt = worksheet.Cells(header_rows, max_column).Address
+        Dim data_header_start = worksheet.Cells(1, column_offset).Address
+        Dim data_columns = column_offset + 1 & ":" & data_column_ct
+        Dim Dataset = worksheet.Range("A" & header_rows + 1 & ": " & max_cell_txt)
+        Dim entire_sheet = worksheet.Range("A1:" & max_cell_txt)
+        Dim Data_columns_address = worksheet.Range(worksheet.Columns(column_offset + 1), worksheet.Columns(max_column)).Address
 
+        'Column_offset Modifications
+        'UnitID
+        With worksheet.Columns("A:A")
+            .ColumnWidth = 3
+        End With
+        'Unit
+        With worksheet.Columns("B:B")
+            .ColumnWidth = 38
+            .EntireColumn.Hidden = True
+        End With
+        'Change Manager
+        With worksheet.Columns("C:C")
+            .ColumnWidth = 8
+            .EntireColumn.Hidden = True
+        End With
+        'Budget Number
+        With worksheet.Columns("D:D")
+            .ColumnWidth = 15
+            .WrapText = True
+        End With
+        'EID
+        With worksheet.Columns("E:E")
+            .ColumnWidth = 10
+        End With
+        'Employee Name
+        With worksheet.Columns("F:F")
+            .ColumnWidth = 25
+            .WrapText = True
+        End With
+        'Supervisory Org
+        With worksheet.Columns("G:G")
+            .ColumnWidth = 40
+        End With
+        'Data Columns
+        With worksheet.Columns(data_columns_address)
+            .ColumnWidth = 3
+            .HorizontalAlignment = Excel.XlHAlign.xlHAlignCenter
+        End With
+
+        'Dataset Color Coding
         index = column_offset
         Do
             If worksheet.Cells(1, index).Value = "I9" Then
                 worksheet.Columns(index).Interior.Color = RGB(253, 228, 207)
-                worksheet.Range(worksheet.Cells(1, index), worksheet.Cells(3, index)).Interior.Color = RGB(247, 150, 70)
+                worksheet.Range(worksheet.Cells(1, index), worksheet.Cells(header_rows, index)).Interior.Color = RGB(247, 150, 70)
             ElseIf worksheet.Cells(1, index).Value = "ABP" Then
                 worksheet.Columns(index).Interior.Color = RGB(218, 231, 246)
-                worksheet.Range(worksheet.Cells(1, index), worksheet.Cells(3, index)).Interior.Color = RGB(83, 141, 213)
+                worksheet.Range(worksheet.Cells(1, index), worksheet.Cells(header_rows, index)).Interior.Color = RGB(83, 141, 213)
             ElseIf worksheet.Cells(1, index).Value = "ACP" Then
                 worksheet.Columns(index).Interior.Color = RGB(246, 230, 230)
-                worksheet.Range(worksheet.Cells(1, index), worksheet.Cells(3, index)).Interior.Color = RGB(218, 150, 148)
+                worksheet.Range(worksheet.Cells(1, index), worksheet.Cells(header_rows, index)).Interior.Color = RGB(218, 150, 148)
             ElseIf worksheet.Cells(1, index).Value = "CP" Then
                 worksheet.Columns(index).Interior.Color = RGB(238, 234, 242)
-                worksheet.Range(worksheet.Cells(1, index), worksheet.Cells(3, index)).Interior.Color = RGB(128, 100, 162)
+                worksheet.Range(worksheet.Cells(1, index), worksheet.Cells(header_rows, index)).Interior.Color = RGB(128, 100, 162)
             ElseIf worksheet.Cells(1, index).Value = "CAC" Then
                 worksheet.Columns(index).Interior.Color = RGB(228, 223, 236)
-                worksheet.Range(worksheet.Cells(1, index), worksheet.Cells(3, index)).Interior.Color = RGB(228, 223, 236)
+                worksheet.Range(worksheet.Cells(1, index), worksheet.Cells(header_rows, index)).Interior.Color = RGB(228, 223, 236)
             ElseIf worksheet.Cells(1, index).Value = "HRC" Then
                 worksheet.Columns(index).Interior.Color = RGB(228, 228, 228)
-                worksheet.Range(worksheet.Cells(1, index), worksheet.Cells(3, index)).Interior.Color = RGB(178, 178, 178)
+                worksheet.Range(worksheet.Cells(1, index), worksheet.Cells(header_rows, index)).Interior.Color = RGB(178, 178, 178)
             ElseIf worksheet.Cells(1, index).Value = "HRP" Then
                 worksheet.Columns(index).Interior.Color = RGB(205, 233, 239)
-                worksheet.Range(worksheet.Cells(1, index), worksheet.Cells(3, index)).Interior.Color = RGB(49, 134, 155)
+                worksheet.Range(worksheet.Cells(1, index), worksheet.Cells(header_rows, index)).Interior.Color = RGB(49, 134, 155)
             ElseIf worksheet.Cells(1, index).Value = "TC" Then
                 worksheet.Columns(index).Interior.Color = RGB(241, 245, 231)
-                worksheet.Range(worksheet.Cells(1, index), worksheet.Cells(3, index)).Interior.Color = RGB(196, 215, 155)
+                worksheet.Range(worksheet.Cells(1, index), worksheet.Cells(header_rows, index)).Interior.Color = RGB(196, 215, 155)
             End If
             index = index + 1
-        Loop Until index > column_offset + data_column_ct
+        Loop Until index > max_column
 
-        worksheet.Range("A1:AW3").Font.Bold = True
-        worksheet.Range("A3:AW3").Borders(Excel.XlBordersIndex.xlEdgeBottom).LineStyle = Excel.XlLineStyle.xlContinuous
+        'Header Modifications
+        worksheet.Range("A1: " & max_header_txt).Font.Bold = True
+        worksheet.Range("A2:" & max_header_txt).Borders(Excel.XlBordersIndex.xlEdgeBottom).LineStyle = Excel.XlLineStyle.xlContinuous
+        worksheet.Range("H2: " & max_header_txt).Orientation = 90
 
-        Dim Dataset = worksheet.Range("A4:" & max_cell_txt)
-        Dim entire_sheet = worksheet.Range("A1:" & max_cell_txt)
-
+        'All Cells
         With worksheet.Range("A1:" & max_cell_txt).Font
             .Size = 10
         End With
 
-        worksheet.Range("A4:" & max_cell_txt).Borders(Excel.XlBordersIndex.xlInsideHorizontal).LineStyle = Excel.XlLineStyle.xlDot
-        worksheet.Range("A4:" & max_cell_txt).Borders(Excel.XlBordersIndex.xlInsideHorizontal).ThemeColor = 1
-        worksheet.Range("A4:" & max_cell_txt).Borders(Excel.XlBordersIndex.xlInsideHorizontal).TintAndShade = -0.14996795556505
+        'All Data Rows
+        worksheet.Range("A" & header_rows + 1 & ": " & max_cell_txt).Borders(Excel.XlBordersIndex.xlInsideHorizontal).LineStyle = Excel.XlLineStyle.xlDot
+        worksheet.Range("A" & header_rows + 1 & ": " & max_cell_txt).Borders(Excel.XlBordersIndex.xlInsideHorizontal).ThemeColor = 1
+        worksheet.Range("A" & header_rows + 1 & ": " & max_cell_txt).Borders(Excel.XlBordersIndex.xlInsideHorizontal).TintAndShade = -0.14996795556505
+        worksheet.Rows("3:" & max_row).Autofit
 
-        worksheet.Columns("I:AW").HorizontalAlignment = Excel.XlHAlign.xlHAlignCenter
+        'AutoFilter
+        worksheet.Range("A" & header_rows & ":" & max_cell_txt).Autofilter
 
-        worksheet.Range("G2:AW2").Orientation = 90
-        worksheet.Range("A3:" & max_cell_txt).Autofilter
-        worksheet.Columns("A:A").WrapText = True
-        worksheet.Columns("F:F").WrapText = True
-
-
-        worksheet.Autofilter.Sort.SortFields.Add(Key:=worksheet.Range("F3:F" & total_rows), SortOn:=Excel.XlSortOn.xlSortOnValues, Order:=Excel.XlSortOrder.xlAscending, DataOption:=Excel.XlSortDataOption.xlSortNormal)
-        'worksheet.Sort.SortFields.Add(Key:=worksheet.Range("D3:D" & max_row), SortOn:=Excel.XlSortOn.xlSortOnValues, Order:=Excel.XlSortOrder.xlAscending, DataOption:=Excel.XlSortDataOption.xlSortNormal)
-
-        With worksheet.Autofilter.Sort
-            .Header = Excel.XlYesNoGuess.xlYes
-            .MatchCase = False
-            .Orientation = Excel.Constants.xlTopToBottom
-            .SortMethod = Excel.XlSortMethod.xlPinYin
-            .Apply
-        End With
-
+        'Page Setup
         worksheet.PageSetup.PrintArea = "$A$1:" & max_cell_txt
         worksheet.PageSetup.Orientation = Excel.XlPageOrientation.xlLandscape
         worksheet.PageSetup.PaperSize = Excel.XlPaperSize.xlPaper11x17
         worksheet.PageSetup.PrintTitleRows = "$1:$3"
-        worksheet.PageSetup.PrintTitleColumns = "$A:$G"
+        worksheet.PageSetup.PrintTitleColumns = "$A:$H"
         worksheet.PageSetup.CenterHeader = where_clause & Chr(10) & worksheet_name
         worksheet.PageSetup.RightHeader = "&D"
 
@@ -1954,7 +2046,7 @@ Module Module1
         Dim rec As ADODB.Recordset
         Dim worksheet
         Dim condition As String
-        Dim debug_mode As Boolean
+        Dim debug_state As Boolean
         Dim role_title As String
         Dim role_description As String
         Dim role_code As String
@@ -1967,7 +2059,7 @@ Module Module1
         'workbook 
         'worksheet
         condition = ""
-        debug_mode = True
+        debug_state = False
         role_title = ""
         role_description = ""
         role_code = ""
@@ -1990,7 +2082,7 @@ Module Module1
 
         worksheet = workbook.Worksheets(worksheet_name)
 
-        If debug_mode = True Then
+        If debug_state = True Then
             objExcel.Visible = True
             worksheet.Activate
             worksheet.Cells(1, 1).Activate
@@ -2007,8 +2099,8 @@ Module Module1
         worksheet.Columns(1).Insert
 
         worksheet.Columns("A:A").ColumnWidth = 6        'Workday Code
-        worksheet.Columns("B:B").ColumnWidth = 30       'Workday Role
-        worksheet.Columns("C:C").ColumnWidth = 75       'Workday Role Description
+        worksheet.Columns("B:B").ColumnWidth = 30       'Workday Group
+        worksheet.Columns("C:C").ColumnWidth = 75       'Workday Group Description
 
         'worksheet.Range("G2:N2").Cut
 
@@ -2176,14 +2268,13 @@ Module Module1
         Dim fieldCount
         Dim recArray
         Dim recCount
-        Dim debug_mode
+        Dim debug_state
 
-        debug_mode = False
+        debug_state = False
 
-        If debug_mode = True Then
+        If debug_state = True Then
             objExcel.Visible = True
         End If
-
 
         objExcel.DisplayAlerts = 0 ' Don't display any messages about conversion and so forth
         Worksheet = workbook.Worksheets(worksheet_name)
@@ -2246,8 +2337,6 @@ Module Module1
 
         workbook.SaveAs(FileName:=file_path)
 
-        Return workbook
-
         workbook = Nothing
         Worksheet = Nothing
 
@@ -2258,11 +2347,11 @@ Module Module1
         Dim fieldCount
         Dim recArray
         Dim recCount
-        Dim debug_mode
+        Dim debug_state
 
-        debug_mode = False
+        debug_state = False
 
-        If debug_mode = True Then
+        If debug_state = True Then
             objExcel.Visible = True
         End If
         objExcel.DisplayAlerts = 0 ' Don't display any messages about conversion and so forth
